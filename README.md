@@ -18,7 +18,7 @@ However, this project won't see anything that doesn't go over pipes, which is mo
 * Possibly more things
 
 ## Usage
-You can download the pre-compiled binaries from the Releases page, and run:
+You can download pre-compiled binaries from the [Releases](https://github.com/tomer8007/chromium-ipc-sniffer/releases) page, and run:
 ```
 C:\>chromeipc.exe
 
@@ -40,3 +40,37 @@ Type -h to get usage help and extended options
 ```
 
 Wireshark should open automatically.
+
+## Cheat Sheet
+### Filtering
+It's worth noting that you can filter the results in Wireshark to show only packets of interest. 
+Examples:
+* To show only packets going to/from a particular process, use `npfs.pid == 1234`
+* To show only packets with a particular method name, use `mojouser.method contains "SomeMethod"`
+
+### Enabling deep mojo arguments dissection
+By default, the LUA dissectors will only show `Nested Struct/Array` trees and won't try to go through all the fields.
+You can enable deep inspection, but it's slow for a large number of packets and not complete.
+
+Go to Edit -> Prefrences -> Protocols -> MOJOUSER -> Enable structs deep dissection
+
+## Limitations
+* Supports Chrome 80+ on 64-bit Windows only
+* Tested only on official, branded Chrome builds. Could theoretically work on other builds too, as well as other chromium-based browsers (Edge)
+* Names of methods as shown in Wireshark is based on the chromium sources, and some mojom interfaces use unscrambled ordinals, which won't be resolved
+* Parsing is not 100% complete, e.g unions/enums/maps are not fully supported
+
+## FAQ
+
+### What is `tdevmonc.sys`?
+`tdevmonc.sys` (or [Tibbo](https://tibbo.com/) Device Monitor) is a third-party kernel-mode driver that is used to capture the Named Pipe traffic.
+The reason to include it is to avoid the need to enable test signing or to tampter with chrome processes.
+
+
+The driver works by `IoAttachDeviceToDeviceStack`ing on top of the `\Device\NamedPipe` device and acting as a filter driver. Then the data that is written to pipes is exposed to user mode using various IOCTLs.
+
+You can find sources for this driver [here](https://tibbo.com/downloads/archive/tdevmon/tdevmon-3.3.5/), as well as binaries and PDB [here](https://tibbo.com/downloads/archive/tdevmon/tdevmon-3.3.2/).
+
+Note that this driver is used by [IO ninja](https://ioninja.com/), which is not entirely freeware.
+Also note this driver does not practicly support unloading once it attaches to at least one device (you need to reboot).
+
