@@ -46,7 +46,7 @@ Wireshark should open automatically.
 It's worth noting that you can filter the results in Wireshark to show only packets of interest. 
 Examples:
 * To show only packets going to/from a particular process, use `npfs.pid == 1234`
-* To show only packets with a particular method name, use `mojouser.method contains "SomeMethod"`
+* To show only packets with a particular method name, use `mojouser.name contains "SomeMethod"`
 
 ### Enabling deep mojo arguments dissection
 By default, the LUA dissectors will only show `Nested Struct/Array` trees and won't try to go through all the fields.
