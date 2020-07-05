@@ -13,7 +13,7 @@ It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/win
 * Audio sync messages (`\pipe\chrome.sync.xxxxx`)
 
 However, this project won't see anything that doesn't go over pipes, which is mostly shared memory IPC:
-* Mojo data pipe contents (real time networking buffers, audio, etc.)
+* Mojo data pipe contents (raw networking buffers, audio, etc.)
 * [Sandbox IPC](https://chromium.googlesource.com/chromium/src/+/master/docs/design/sandbox.md#the-target-process)
 * Possibly more things
 
