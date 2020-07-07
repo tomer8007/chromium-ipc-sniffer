@@ -46,7 +46,6 @@ If you don't like pre-built binaries, you can clone and compile this repository 
 
 ## Advanced Usage
 ```
-
 Chrome IPC Sniffer v0.5.0.0
 
 Syntax: chromeipc [options]
