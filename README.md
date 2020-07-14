@@ -3,9 +3,9 @@ This utility helps you explore what Chrome processes are saying to each other un
 
 It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/windows/win32/ipc/named-pipes) IPC primitive and sends it over to dissection.
 
-<img src="https://raw.githubusercontent.com/tomer8007/chromium-ipc-sniffer/master/screenshot_3.png" >
+<img src="https://raw.githubusercontent.com/tomer8007/chromium-ipc-sniffer/master/screenshot_2.png" >
 
-## Supported protocol and formats
+## Supported protocols and formats
 * [Mojo Core](https://chromium.googlesource.com/chromium/src/+/master/mojo/core/README.md) (Ports, Nodes, Invitations, Handles, etc.)
 * [Mojo binded user messages](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/cpp/bindings/README.md) (actual `.mojom` IDL method calls)
 * [Legacy IPC](https://www.chromium.org/developers/design-documents/inter-process-communication)
@@ -13,7 +13,7 @@ It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/win
 * Audio sync messages (`\pipe\chrome.sync.xxxxx`)
 
 However, this project won't see anything that doesn't go over pipes, which is mostly shared memory IPC:
-* Mojo data pipe contents (real time networking buffers, audio, etc.)
+* Mojo data pipe contents (raw networking buffers, audio, etc.)
 * [Sandbox IPC](https://chromium.googlesource.com/chromium/src/+/master/docs/design/sandbox.md#the-target-process)
 * Possibly more things
 
@@ -41,12 +41,42 @@ Type -h to get usage help and extended options
 
 Wireshark should open automatically.
 
+### Compiling it yourself
+If you don't like pre-built binaries, you can clone and compile this repository at least using Visual Studio 2015. Note that it depends on the `Newtonsoft.Json` package.
+
+## Advanced Usage
+```
+Chrome IPC Sniffer v0.5.0.0
+
+Syntax: chromeipc [options]
+Available options:
+
+    Capturing:
+        --only-mojo
+            Records only packets sent over a "\\mojo.*" pipe (without "\\chrome.sync.*", etc.).
+
+        --only-new-mojo-pipes
+            Records only packets sent over mojo AND newly-created pipes since the start of the capture
+            This helps reducing noise and it might improve performance
+            (example: opening a new tab will create a new mojo pipe).
+
+    Interface resolving:
+        --update-interfaces-info
+            Forcefully re-scan the chromium sources (from the internet) and populate the *_interfaces.json files.
+            This might take a few good minutes. Use this if you see wrong interfaces info and wish to update
+
+        --extract-method-names
+            Forcefully re-scan chrome.dll file to find the message IDs and update the mojo_interfaces_map.lua file
+            This should happen automaticlly whenever chrome.dll changes.
+
+```
+
 ## Cheat Sheet
 ### Filtering
 It's worth noting that you can filter the results in Wireshark to show only packets of interest. 
 Examples:
 * To show only packets going to/from a particular process, use `npfs.pid == 1234`
-* To show only packets with a particular method name, use `mojouser.method contains "SomeMethod"`
+* To show only packets with a particular method name, use `mojouser.name contains "SomeMethod"`
 
 ### Enabling deep mojo arguments dissection
 By default, the LUA dissectors will only show `Nested Struct/Array` trees and won't try to go through all the fields.
