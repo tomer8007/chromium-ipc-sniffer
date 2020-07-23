@@ -12,7 +12,7 @@ It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/win
 * [Mojo data pipe](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/c/system/README.md#Data-Pipes) control messages (read/wrote X bytes)
 * Audio sync messages (`\pipe\chrome.sync.xxxxx`)
 
-You are welcomed to look at some [examples](https://github.com/tomer8007/chromium-ipc-sniffer/wiki/Examples).
+You are welcomed to look at some [examples](https://github.com/tomer8007/chromium-ipc-sniffer/wiki/Examples) as well.
 
 However, this project won't see anything that doesn't go over pipes, which is mostly shared memory IPC:
 * Mojo data pipe contents (raw networking buffers, audio, etc.)
@@ -106,5 +106,5 @@ The driver works by `IoAttachDeviceToDeviceStack`ing on top of the `\Device\Name
 You can find sources for this driver [here](https://tibbo.com/downloads/archive/tdevmon/tdevmon-3.3.5/), as well as binaries and PDB [here](https://tibbo.com/downloads/archive/tdevmon/tdevmon-3.3.2/).
 
 Note that this driver is used by [IO ninja](https://ioninja.com/), which is not entirely freeware.
-Also note this driver does not practicly support unloading once it attaches to at least one device (you need to reboot).
+Also note this driver does not practically support unloading once it attaches to at least one device (you need to reboot).
 
