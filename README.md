@@ -78,6 +78,7 @@ Available options:
 It's worth noting that you can filter the results in Wireshark to show only packets of interest. 
 Examples:
 * To show only packets going to/from a particular process, use `npfs.pid == 1234`
+* To show only packets not going to/from the GPU Process, use `!(npfs.process_type contains "GPU Process")`
 * To show only packets with a particular method name, use `mojouser.name contains "SomeMethod"`
 
 ### Enabling deep mojo arguments dissection
@@ -88,8 +89,9 @@ Go to Edit -> Prefrences -> Protocols -> MOJOUSER -> Enable structs deep dissect
 
 ## Limitations
 * Supports Chrome 80+ on 64-bit Windows only
-* Tested only on official, branded Chrome builds. Could theoretically work on other builds too, as well as other chromium-based browsers (Edge)
+* Interfaces info are chromium version dependent, so running `--update-interfaces-info` is needed from time to time
 * Names of methods as shown in Wireshark is based on the chromium sources, and some mojom interfaces use unscrambled ordinals, which won't be resolved
+* Tested only on official, branded Chrome builds. Could theoretically work on other builds too, as well as other chromium-based browsers (Edge)
 * Parsing is not 100% complete, e.g unions/enums/maps are not fully supported
 
 ## FAQ
