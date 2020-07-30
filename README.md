@@ -6,7 +6,7 @@ It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/win
 <img src="https://raw.githubusercontent.com/tomer8007/chromium-ipc-sniffer/master/screenshots/screenshot_2.png" >
 
 ## What can I see using this?
-* [Mojo Core](https://chromium.googlesource.com/chromium/src/+/master/mojo/core/README.md) (Ports, Nodes, Invitations, Handles, etc.)
+* [Mojo Core](https://chromium.googlesource.com/chromium/src/+/master/mojo/core/README.md) messages (Ports, Nodes, Invitations, Handles, etc.)
 * [Mojo binded user messages](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/cpp/bindings/README.md) (actual `.mojom` IDL method calls)
 * [Legacy IPC](https://www.chromium.org/developers/design-documents/inter-process-communication)
 * [Mojo data pipe](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/c/system/README.md#Data-Pipes) control messages (read/wrote X bytes)
