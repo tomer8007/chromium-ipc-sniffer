@@ -1,7 +1,7 @@
 # Chromium IPC Sniffer
 This utility helps you explore what Chrome processes are saying to each other under the hood in real-time, using Wireshark.
 
-It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/windows/win32/ipc/named-pipes) IPC primitive and sends it over to dissection.
+It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/windows/win32/ipc/named-pipes) Inter-Process-Communication (IPC) primitive and sends it over to dissection.
 
 <img src="https://raw.githubusercontent.com/tomer8007/chromium-ipc-sniffer/master/screenshots/screenshot_2.png" >
 
