@@ -1,18 +1,18 @@
 # Chromium IPC Sniffer
 This utility helps you explore what Chrome processes are saying to each other under the hood in real-time, using Wireshark.
 
-It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/windows/win32/ipc/named-pipes) IPC primitive and sends it over to dissection.
+It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/windows/win32/ipc/named-pipes) Inter-Process-Communication (IPC) primitive and sends it over to dissection.
 
 <img src="https://raw.githubusercontent.com/tomer8007/chromium-ipc-sniffer/master/screenshots/screenshot_2.png" >
 
 ## What can I see using this?
-* [Mojo Core](https://chromium.googlesource.com/chromium/src/+/master/mojo/core/README.md) (Ports, Nodes, Invitations, Handles, etc.)
+* [Mojo Core](https://chromium.googlesource.com/chromium/src/+/master/mojo/core/README.md) messages (Ports, Nodes, Invitations, Handles, etc.)
 * [Mojo binded user messages](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/cpp/bindings/README.md) (actual `.mojom` IDL method calls)
 * [Legacy IPC](https://www.chromium.org/developers/design-documents/inter-process-communication)
 * [Mojo data pipe](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/c/system/README.md#Data-Pipes) control messages (read/wrote X bytes)
 * Audio sync messages (`\pipe\chrome.sync.xxxxx`)
 
-You are welcomed to look at some [examples](https://github.com/tomer8007/chromium-ipc-sniffer/wiki/Examples).
+You are welcomed to look at some [examples](https://github.com/tomer8007/chromium-ipc-sniffer/wiki/Examples) as well.
 
 However, this project won't see anything that doesn't go over pipes, which is mostly shared memory IPC:
 * Mojo data pipe contents (raw networking buffers, audio, etc.)
@@ -78,6 +78,7 @@ Available options:
 It's worth noting that you can filter the results in Wireshark to show only packets of interest. 
 Examples:
 * To show only packets going to/from a particular process, use `npfs.pid == 1234`
+* To show only packets not going to/from the GPU Process, use `!(npfs.process_type contains "GPU Process")`
 * To show only packets with a particular method name, use `mojouser.name contains "SomeMethod"`
 
 ### Enabling deep mojo arguments dissection
@@ -88,8 +89,9 @@ Go to Edit -> Prefrences -> Protocols -> MOJOUSER -> Enable structs deep dissect
 
 ## Limitations
 * Supports Chrome 80+ on 64-bit Windows only
-* Tested only on official, branded Chrome builds. Could theoretically work on other builds too, as well as other chromium-based browsers (Edge)
+* Interfaces info are chromium version dependent, so running `--update-interfaces-info` is needed from time to time
 * Names of methods as shown in Wireshark is based on the chromium sources, and some mojom interfaces use unscrambled ordinals, which won't be resolved
+* Tested only on official, branded Chrome builds. Could theoretically work on other builds too, as well as other chromium-based browsers (Edge)
 * Parsing is not 100% complete, e.g unions/enums/maps are not fully supported
 
 ## FAQ
@@ -104,5 +106,5 @@ The driver works by `IoAttachDeviceToDeviceStack`ing on top of the `\Device\Name
 You can find sources for this driver [here](https://tibbo.com/downloads/archive/tdevmon/tdevmon-3.3.5/), as well as binaries and PDB [here](https://tibbo.com/downloads/archive/tdevmon/tdevmon-3.3.2/).
 
 Note that this driver is used by [IO ninja](https://ioninja.com/), which is not entirely freeware.
-Also note this driver does not practicly support unloading once it attaches to at least one device (you need to reboot).
+Also note this driver does not practically support unloading once it attaches to at least one device (you need to reboot).
 
