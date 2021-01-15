@@ -12,7 +12,7 @@ It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/win
 * [Mojo data pipe](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/c/system/README.md#Data-Pipes) control messages (read/wrote X bytes)
 * Audio sync messages (`\pipe\chrome.sync.xxxxx`)
 
-You are welcomed to look at some [examples](https://github.com/tomer8007/chromium-ipc-sniffer/wiki/Examples) as well.
+You are welcomed to look at [some traffic examples](https://github.com/tomer8007/chromium-ipc-sniffer/wiki/Examples) as well.
 
 However, this project won't see anything that doesn't go over pipes, which is mostly shared memory IPC:
 * Mojo data pipe contents (raw networking buffers, audio, etc.)
@@ -42,6 +42,8 @@ Type -h to get usage help and extended options
 ```
 
 Wireshark should open automatically.
+
+_[P.S. The pipe `\\.\pipe\chromeipc` has nothing to do with Chrome itself, it's just where this tool will output its traffic to]_
 
 ### Compiling it yourself
 If you don't like pre-built binaries, you can clone and compile this repository at least using Visual Studio 2015. Note that it depends on the `Newtonsoft.Json` package.
