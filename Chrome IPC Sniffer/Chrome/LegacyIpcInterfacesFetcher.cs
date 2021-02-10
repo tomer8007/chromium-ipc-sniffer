@@ -138,7 +138,15 @@ namespace ChromeIPCSniffer
                         i--;
                         continue;
                     }
+                    if (((HttpWebResponse)webException.Response).StatusCode == HttpStatusCode.NotFound)
+                    {
+                        // this IPC header file was not found, most likely because it was removed in newer versions of chromium.
+                        // just ignore
+                        continue;
+                    }
 
+                    textWriter.Close();
+                    File.Delete(CACHE_FILENAME);
                     throw webException;
                 }
             }
