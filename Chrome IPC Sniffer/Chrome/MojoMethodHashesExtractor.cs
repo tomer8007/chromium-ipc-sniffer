@@ -61,6 +61,7 @@ namespace ChromeIPCSniffer
             {
                 int currentOffset = interestingOffsets[i];
                 int interfaceNameOffset = chromeDll.FindStringBeginning(currentOffset);
+                if (interfaceNameOffset == -1) continue;
 
                 int maxDistance = i + 1 < interestingOffsets.Length ? Math.Min(interestingOffsets[i + 1] - currentOffset, 4000) : 4000;
                 BinaryReader reader = new BinaryReader(new MemoryStream(chromeDll, interfaceNameOffset, maxDistance));

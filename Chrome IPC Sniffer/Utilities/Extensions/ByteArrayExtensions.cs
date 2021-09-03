@@ -28,9 +28,9 @@ namespace ChromeIPCSniffer
             return list.Count == 0 ? Empty : list.ToArray();
         }
 
-        public static int FindStringBeginning(this byte[] self, int index)
+        public static int FindStringBeginning(this byte[] self, int index, int maxBackwards= 50)
         {
-            for (int j = 0; j < 50; j++)
+            for (int j = 0; j < maxBackwards; j++)
             {
                 byte c = self[index - j];
                 if (c >= 128 || Char.IsControl((char)c))
@@ -39,7 +39,7 @@ namespace ChromeIPCSniffer
                 }
             }
 
-            return -1;
+            return -1; // the string is too long backwards
         }
 
         static bool IsMatch(byte[] array, int position, byte[] candidate)
