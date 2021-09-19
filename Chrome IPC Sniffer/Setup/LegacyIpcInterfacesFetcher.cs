@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Collections;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     /// <summary>
     /// This class fetches Chrome's source code to get information about all the legacy IPC interfaces that exist.

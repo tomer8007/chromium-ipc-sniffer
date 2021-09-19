@@ -53,7 +53,7 @@ local method                        = ProtoField.new("Mathod Name", "mojouser.me
 -- Expert Info
 --
 local expert_info_legacyipc = ProtoExpert.new("mojouser.legacyipc", "Legacy IPC", expert.group.COMMENTS_GROUP, expert.severity.NOTE)
-local expert_info_unresolved_interface = ProtoExpert.new("mojouser.unresolved_interface", "This method ID could not be resolved, most likely because its ordinal wasn't scrambled", expert.group.COMMENTS_GROUP, expert.severity.WARN)
+local expert_info_unresolved_interface = ProtoExpert.new("mojouser.unresolved_interface", "This method ID could not be resolved", expert.group.COMMENTS_GROUP, expert.severity.WARN)
 
 
 -- Prefrences

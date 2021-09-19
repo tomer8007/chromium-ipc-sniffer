@@ -11,9 +11,9 @@ using System.Runtime.InteropServices;
 using System.Collections;
 using System.Linq;
 
-using static ChromeIPCSniffer.TDevMonitor;
+using static ChromiumIPCSniffer.TDevMonitor;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     class NamedPipeSniffer
     {

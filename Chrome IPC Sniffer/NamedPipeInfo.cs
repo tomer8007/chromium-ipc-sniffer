@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public class NamedPipeInfo
     {

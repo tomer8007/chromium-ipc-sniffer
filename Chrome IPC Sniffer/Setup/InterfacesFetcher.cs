@@ -11,17 +11,21 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Collections;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer.Mojo
 {
     /// <summary>
     /// This class fetches Chrome's source code to get information about all the mojo interfaces that exist.
     /// It uses both GitHub API and chromium.googlesource.com
     /// </summary>
-    public class MojoInterfacesFetcher
+    public class InterfacesFetcher
     {
         public static string CACHE_FILENAME = @"Dissectors/helpers/mojo_interfaces.json";
-        public static List<string> directoriesToLookIn = new List<string> { "services", "ui", "chrome", "media", "ash", "mojo", "url",
+        public static List<string> directoriesToLookIn = new List<string> { "services", "ui", "chrome", "media", "mojo", "url", "cc",
                                                                             "components", "content", "third_party", "device", "ipc", "gpu" };
+
+        public static string[] ignoredFeatures = new string[] { "is_posix", "is_android", "is_chromeos", "is_fuchsia", "is_ios", "is_linux", "is_mac",
+                                                                    "needs_crypt_config", "is_non_android_posix", "ipc_logging", "clang_profiling_inside_sandbox",
+                                                                    "enable_offline_pages", "network_change_notifier_in_browser"};
 
         /// <summary>
         /// Downloads and analyses the .mojom files from the chromium git repository,
@@ -199,7 +203,7 @@ namespace ChromeIPCSniffer
                 int interfaceDefinitionLine = ToLineNumber(mojomFileContents, interfaceMatch.Groups[0].Index);
 
                 // Iterate the methods defined in this interace
-                Regex methodsRegex = new Regex(@"^[^\/{]+?\(.*?\);", regexOptions);
+                Regex methodsRegex = new Regex(@"^[^\/{}]+?\(.*?\);", regexOptions);
                 MatchCollection methodMatches = methodsRegex.Matches(interfaceDefinition);
                 foreach (Match methodMatch in methodMatches)
                 {
@@ -215,13 +219,10 @@ namespace ChromeIPCSniffer
                         // extract the real method name
                         methodName = methodName.Substring(methodName.IndexOf(']') + 1).Trim();
 
-                        if (methodDecleration.StartsWith("[EnableIf=") && !methodDecleration.StartsWith("[EnableIf=is_win"))
+                        if (methodDecleration.Contains("EnableIf=") && !methodDecleration.Contains("EnableIf=is_win"))
                         {
-                            // We are on Windows. skip anything that wouldn't have compiled
-                            // NOTE: there are more modifiers like [EnabledIf=enable_print_preview], we'll have to assume they are on...
-                            // Can we also assume that ipc_logging, clang_profiling_inside_sandbox are disabled?
-                            string[] ignoredFeatures = new string[] { "is_posix", "is_android", "is_chromeos", "is_fuchsia", "is_ios", "is_linux", "is_mac" };
-                            if (ignoredFeatures.Any(feature => methodDecleration.StartsWith("[EnableIf=" + feature)))
+                            // We are on Windows. skip anything that wouldn't have compiled on release versions
+                            if (ignoredFeatures.Any(feature => methodDecleration.Contains("EnableIf=" + feature)))
                                 continue;
                         }
                     }

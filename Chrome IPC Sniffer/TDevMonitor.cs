@@ -9,10 +9,10 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.ServiceProcess;
-using ChromeIPCSniffer.Utilities;
-using ChromeIPCSniffer.Extensions;
+using ChromiumIPCSniffer.Utilities;
+using ChromiumIPCSniffer.Extensions;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public class TDevMonitor
     {

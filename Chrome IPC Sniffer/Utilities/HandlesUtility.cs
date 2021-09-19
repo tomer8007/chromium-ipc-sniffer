@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Permissions;
 using Microsoft.Win32.SafeHandles;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public class HandlesUtility
     {

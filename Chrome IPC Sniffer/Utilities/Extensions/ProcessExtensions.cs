@@ -7,7 +7,7 @@ using System.Management;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public static class ProcessExtensions
     {

@@ -8,8 +8,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Globalization;
 using System.Reflection;
+using ChromiumIPCSniffer.Mojo;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public static class Program
     {
@@ -53,14 +54,14 @@ namespace ChromeIPCSniffer
             //
 
             ChromeMonitor chromeMonitor = new ChromeMonitor();
-            string mojoVersion = MojoInterfacesFetcher.UpdateInterfacesInfoIfNeeded(chromeMonitor.ChromeVersion, force: forceFetchInterfacesInfo);
+            string mojoVersion = InterfacesFetcher.UpdateInterfacesInfoIfNeeded(chromeMonitor.ChromeVersion, force: forceFetchInterfacesInfo);
             string legacyIpcversion = LegacyIpcInterfacesFetcher.UpdateInterfacesInfoIfNeeded(chromeMonitor.ChromeVersion, force: forceFetchInterfacesInfo);
             if (mojoVersion != chromeMonitor.ChromeVersion || legacyIpcversion != chromeMonitor.ChromeVersion)
             {
                 Console.WriteLine("[!] Cached info is for " + mojoVersion + ", you may run --update-interfaces-info");
             }
 
-            MojoMethodHashesExtractor.ExtractMethodNames(chromeMonitor.DLLPath, force: forceExtractMethodNames);
+            MethodHashesExtractor.ExtractMethodNames(chromeMonitor.DLLPath, force: forceExtractMethodNames);
 
             bool success = UpdateWiresharkConfiguration();
             if (!success) return;

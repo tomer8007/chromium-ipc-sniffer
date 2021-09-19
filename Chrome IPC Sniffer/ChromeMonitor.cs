@@ -9,7 +9,7 @@ using System.Management;
 using Newtonsoft.Json;
 using System.Net;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public class ChromeMonitor
     {
@@ -33,6 +33,9 @@ namespace ChromeIPCSniffer
 
             Console.WriteLine("[+] You are using chromium " + this.ChromeVersion);
             //Console.WriteLine("[+] " + this.DLLPath);
+
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
         }
 
         public List<int> GetRunningChromePIDs()

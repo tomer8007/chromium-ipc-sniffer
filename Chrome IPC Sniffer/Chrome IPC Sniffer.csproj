@@ -8,7 +8,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>ChromeIPCSniffer</RootNamespace>
     <AssemblyName>chromeipc</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
@@ -37,9 +37,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Management" />
@@ -52,15 +49,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Chrome\LegacyIpcInterfacesFetcher.cs" />
+    <Compile Include="Setup\InernalStructs.cs" />
+    <Compile Include="Setup\LegacyIpcInterfacesFetcher.cs" />
     <Compile Include="Utilities\Extensions\ByteArrayExtensions.cs" />
-    <Compile Include="Chrome\ChromeMonitor.cs" />
+    <Compile Include="ChromeMonitor.cs" />
     <Compile Include="Utilities\Extensions\DirectoryExtensions.cs" />
     <Compile Include="Utilities\Extensions\FunctionExtensions.cs" />
-    <Compile Include="Chrome\MojoInterfacesFetcher.cs" />
+    <Compile Include="Setup\InterfacesFetcher.cs" />
     <Compile Include="Utilities\Extensions\ServiceControllerExtension.cs" />
     <Compile Include="TDevMonitor.cs" />
-    <Compile Include="Chrome\MojoMethodHashesExtractor.cs" />
+    <Compile Include="Setup\MethodHashesExtractor.cs" />
     <Compile Include="NamedPipeInfo.cs" />
     <Compile Include="NamedPipeSniffer.cs" />
     <Compile Include="Utilities\Extensions\ProcessExtensions.cs" />
@@ -99,7 +97,6 @@
     <None Include="Dissectors\npfs.lua">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="packages.config" />
     <None Include="tdevmonc.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -108,6 +105,11 @@
     <Content Include="ProcCmdLine64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>12.0.3</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

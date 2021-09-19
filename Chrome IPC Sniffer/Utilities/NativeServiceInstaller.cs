@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.ComponentModel;
 
-namespace ChromeIPCSniffer.Utilities
+namespace ChromiumIPCSniffer.Utilities
 {
     public static class NativeServiceInstaller
     {

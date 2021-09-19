@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public class QueueStream : MemoryStream
     {

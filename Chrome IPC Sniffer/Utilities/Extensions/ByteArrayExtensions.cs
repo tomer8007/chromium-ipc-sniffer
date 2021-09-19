@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ChromeIPCSniffer
+namespace ChromiumIPCSniffer
 {
     public static class ByteArrayExtensions
     {
@@ -34,6 +34,20 @@ namespace ChromeIPCSniffer
             {
                 byte c = self[index - j];
                 if (c >= 128 || Char.IsControl((char)c))
+                {
+                    return index - j + 1;
+                }
+            }
+
+            return -1; // the string is too long backwards
+        }
+
+        public static int FindZeroesBeginning(this byte[] self, int index, int maxBackwards = 50)
+        {
+            for (int j = 0; j < maxBackwards; j++)
+            {
+                byte c = self[index - j];
+                if (c != 0)
                 {
                     return index - j + 1;
                 }

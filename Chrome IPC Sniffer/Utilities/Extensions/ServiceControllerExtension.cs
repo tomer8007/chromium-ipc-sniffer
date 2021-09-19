@@ -6,7 +6,7 @@ using System.ServiceProcess;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ChromeIPCSniffer.Extensions
+namespace ChromiumIPCSniffer.Extensions
 {
     public static class ServiceControllerExtension
     {
