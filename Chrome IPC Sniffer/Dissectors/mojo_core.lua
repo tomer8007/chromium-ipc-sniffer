@@ -357,15 +357,15 @@ function mojocore_protocol.dissector(buffer, pinfo, tree)
                 eventDataSubstree:add_le(observe_proxy_target_node_name,     buffer(offset,16));                                                 offset = offset + 16
                 eventDataSubstree:add_le(observe_proxy_target_port_name,     buffer(offset,16));                                                 offset = offset + 16
 
-                local source_port = string.lower(string.sub(tostring(_proxyport()()), 0, 4)) .. ".."
-                local target_port = string.lower(string.sub(tostring(_targetport()()), 0, 4)) .. ".."
-                pinfo.cols.info = tostring(pinfo.cols.info) .. " Observe Proxying Port" -- .. source_port .. " -> " .. target_port
+                local source_port = string.lower(string.sub(tostring(_proxyport()()), 0, 16)) .. ".."
+                local target_port = string.lower(string.sub(tostring(_targetport()()), 0, 16)) .. ".."
+                pinfo.cols.info = tostring(pinfo.cols.info) .. " Observe Proxying Port: " .. source_port .. " -> " .. target_port
             
             elseif _eventtype()() == 4 then
                 -- Observe Closure
 
                 eventDataSubstree:append_text(" (Observe Closure)")
-                pinfo.cols.info = tostring(pinfo.cols.info) .. " Observe Port Closure " -- of port " .. string.lower(string.sub(tostring(_eventport()()), 0, 4)) .. "..."
+                pinfo.cols.info = tostring(pinfo.cols.info) .. " Observe Port Closure: " .. string.lower(string.sub(tostring(_eventport()()), 0, 16)) .. "..."
 
                 eventDataSubstree:add_le(observe_closure_last_sequence_number,     buffer(offset,8));                                           offset = offset + 8
             elseif _eventtype()() == 3 then

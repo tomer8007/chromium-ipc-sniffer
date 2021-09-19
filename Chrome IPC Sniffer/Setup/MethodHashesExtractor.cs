@@ -175,8 +175,6 @@ namespace ChromiumIPCSniffer.Mojo
             return foundMethodNames;
         }
 
-        public static HashSet<Tuple<int, int>> succ = new HashSet<Tuple<int, int>>();
-
         // TODO TODO TODO TODO
         /// <summary>
         /// Tries to find the std::pair<uint32_t, mojo::internal::GenericValidationInfo> that corrosponds to the given ::Name_ (see explanation above).
@@ -216,10 +214,9 @@ namespace ChromiumIPCSniffer.Mojo
                 List<string> methods = GetInterfaceMethods(interfacesNames.ToArray());
                 if (methods.Count > 0 && methods.Count == validationEntries.Count)
                 {
-                    // looks like we guessed right
+                    // looks like we guessed right?
 
                     //Console.WriteLine("Saved " + interfaceName);
-                    succ.Add(attempt);
                     for (int i = 0; i < validationEntries.Count; i++)
                     {
                         if (methods[i].StartsWith(interfaceName + "."))
