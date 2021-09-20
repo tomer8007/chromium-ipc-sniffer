@@ -92,7 +92,11 @@ function npfs_protocol.dissector(buffer, pinfo, tree)
 
     -- Check the payload and decide if it should be interpreted as Mojo or not
     if mojo_data_len == _data_len()() and mojo_data_len > 4 then
-        Dissector.get("mojo"):call(buffer(offset, _data_len()()):tvb(),  pinfo, tree)
+        Dissector.get("mojo"):call(buffer(offset, length-offset):tvb(),  pinfo, tree)
+
+        if mojo_data_len > length - offset then
+            pinfo.cols.info = tostring(pinfo.cols.info) .. " [truncated]"
+        end
 
     elseif _pipename()():find("chrome%.sync%.") ~= nil then
         Dissector.get("audiosync"):call(buffer(offset, _data_len()()):tvb(),  pinfo, tree)

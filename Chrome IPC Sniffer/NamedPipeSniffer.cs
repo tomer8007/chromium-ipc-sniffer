@@ -93,8 +93,7 @@ namespace ChromiumIPCSniffer
                 readingLoopThread.Start();
             }
 
-            Thread processingLoopThread = new Thread(new ThreadStart(ProcessingLoop));
-            processingLoopThread.Priority = ThreadPriority.AboveNormal;
+            Thread processingLoopThread = new Thread(new ThreadStart(ProcessingLoop)) { Priority = ThreadPriority.AboveNormal };
             processingLoopThread.Start();
 
             Thread statisticsThread = new Thread(new ThreadStart(StatisticsThread));
@@ -445,6 +444,12 @@ namespace ChromiumIPCSniffer
             writer.Write(pipeName);
             writer.Write(header.timestamp);
             writer.Write(writeParams.dataSize);
+
+            if (data.Length > 262144)
+            {
+                // if this packet is too large for Wireshark's WTAP_MAX_PACKET_SIZE_STANDARD, we'll truncate it.
+                data = data.Take(262000).ToArray();
+            }
 
             writer.Write(data);
 

@@ -181,7 +181,7 @@ namespace Wireshark
             return SendToWireshark(buffer, offset, buffer.Length, DateTime.Now);
         }
 
-        public bool SendToWireshark(byte[] buffer, int offset, int lenght, DateTime date)
+        public bool SendToWireshark(byte[] buffer, int offset, int length, DateTime date)
         {
             UInt32 date_sec, date_usec;
 
@@ -191,7 +191,7 @@ namespace Wireshark
             date_sec = DateTimeToUnixTimestamp(date);
             date_usec = (UInt32)((date.Ticks - d2.Ticks) / 10);
 
-            return SendToWireshark(buffer, offset, lenght, date_sec, date_usec);
+            return SendToWireshark(buffer, offset, length, date_sec, date_usec);
         }
 
         public bool SendToWireshark(byte[] buffer, int offset, int lenght, UInt32 date_sec, UInt32 date_usec)

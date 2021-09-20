@@ -41,6 +41,9 @@ namespace ChromiumIPCSniffer.Mojo
         /// 
         /// We do it this way since we can't really know the salt used in mojom_bindings_generator.py for official builds
         /// https://source.chromium.org/chromium/chromium/src/+/master:mojo/public/tools/bindings/mojom_bindings_generator.py;l=123
+        /// 
+        /// TODO: Because method hashes depend only on the short interface name and method index, there are collisions. e.g media.mojom.Renderer and content.mojom.Renderer
+        ///       we'll probably bet on the one that has more methods or so
         /// </summary>
         private static void ExtractMeethodNamesInternal(string chromeDllPath, bool force = false)
         {
@@ -160,12 +163,6 @@ namespace ChromiumIPCSniffer.Mojo
         {
             List<string> foundMethodNames = new List<string>();
 
-
-            // TODO: we need to return the methods in the same ORDER they appear in methodsPerInterface.
-            // this means we need to use OrderedDictionary or so
-            Array.Sort(interfaceNames, (name1, name2) => methodsPerInterface.ContainsKey(name1) && methodsPerInterface.ContainsKey(name2) ?
-                                                            methodsPerInterface[name1].Item2 - methodsPerInterface[name2].Item2
-                                                            : 0);
             foreach (string interfaceName in interfaceNames)
             {
                 if (methodsPerInterface.ContainsKey(interfaceName))
@@ -173,6 +170,13 @@ namespace ChromiumIPCSniffer.Mojo
             }
 
             return foundMethodNames;
+        }
+
+        public static string[] SortInterfaceNames(params string[] interfaceNames)
+        {
+            Array.Sort(interfaceNames, (name1, name2) => methodsPerInterface.ContainsKey(name1) && methodsPerInterface.ContainsKey(name2) ?
+                                                            methodsPerInterface[name1].Item2 - methodsPerInterface[name2].Item2 : 0);
+            return interfaceNames;
         }
 
         // TODO TODO TODO TODO
@@ -197,9 +201,9 @@ namespace ChromiumIPCSniffer.Mojo
                 return possibleTable.ToArray();
             }
 
-            // now things will get more complicated
+            // now things will get more complicated :-(
             Tuple<int, int>[] attempts = { Tuple.Create(8, 12), Tuple.Create(2, 5), Tuple.Create(1, 5), Tuple.Create(1, 11),
-                                            Tuple.Create(4, 8), Tuple.Create(2, 6)};
+                                            Tuple.Create(5, 6), Tuple.Create(2, 6), Tuple.Create(0, 9)};
             foreach (Tuple<int, int> attempt in attempts)
             {
                 int maxInterfacesBack = attempt.Item1;
@@ -208,21 +212,49 @@ namespace ChromiumIPCSniffer.Mojo
                 reader.BaseStream.Position = interfaceNameOffset;
 
                 GoBackXInterfaces(reader, maxInterfaces: maxInterfacesBack);
-                (List<string> interfacesNames, List<ValidationTableEntry> validationEntries) = ReadInterfaces(reader, maxInterfaces: maxInterfacesForward);
+                (List<string> interfacesNames, List<List<ValidationTableEntry>> validationEntries) = ReadInterfaces(reader, maxInterfaces: maxInterfacesForward);
                 if (!interfacesNames.Contains(interfaceName)) continue;
 
-                List<string> methods = GetInterfaceMethods(interfacesNames.ToArray());
-                if (methods.Count > 0 && methods.Count == validationEntries.Count)
-                {
-                    // looks like we guessed right?
+                string[] expectedInterfaces = SortInterfaceNames(interfacesNames.ToArray());
 
-                    //Console.WriteLine("Saved " + interfaceName);
-                    for (int i = 0; i < validationEntries.Count; i++)
+                bool matches = true;
+                for (int i = 0; i < expectedInterfaces.Length && i < validationEntries.Count; i++)
+                {
+                    List<ValidationTableEntry> entriesFound = validationEntries[i];
+                    string expectedInterface = expectedInterfaces[i];
+                    List<string> methods = GetInterfaceMethods(expectedInterface);
+
+                    if (methods.Count < entriesFound.Count)
                     {
-                        if (methods[i].StartsWith(interfaceName + "."))
-                            return validationEntries.Skip(i).ToArray();
+                        // maybe we could have captured multiple interfaces in the same table
+                        List<List<ValidationTableEntry>> splittedTables = SplitValidationTable(entriesFound, expectedInterfaces, i);
+                        if (splittedTables == null)
+                        {
+                            matches = false;
+                            break;
+                        }
+
+                        validationEntries.RemoveAt(i);
+                        validationEntries.InsertRange(i, splittedTables);
+                    }
+                    else if (methods.Count > entriesFound.Count)
+                    {
+                        matches = false;
+                        break;
                     }
                 }
+
+                matches = matches && validationEntries.Count == expectedInterfaces.Length;
+
+                if (matches)
+                {
+                    // looks like we guessed right?
+                    //Console.WriteLine("Saved " + interfaceName);
+                    int interfaceIndex = expectedInterfaces.ToList().IndexOf(interfaceName);
+                    return validationEntries[interfaceIndex].ToArray();
+                }
+
+
             }
 
 
@@ -239,8 +271,7 @@ namespace ChromiumIPCSniffer.Mojo
             //          validation tables can still be defined after these borders, for example in ResolveHostClient
 
             // maybe this interface has no methods or whatever. there are weird cases, and we're not gonna handle them all.
-            // Console.WriteLine("Can't find " + interfaceName);
-
+            //Console.WriteLine("Can't find " + interfaceName);
             return new ValidationTableEntry[0];
 
         }
@@ -308,10 +339,10 @@ namespace ChromiumIPCSniffer.Mojo
             reader.BaseStream.Position = lastGoodPosition; // account for last unsuccessful read
         }
 
-        public static (List<string>, List<ValidationTableEntry>) ReadInterfaces(BinaryReader reader, int maxInterfaces = 5)
+        public static (List<string>, List<List<ValidationTableEntry>>) ReadInterfaces(BinaryReader reader, int maxInterfaces = 5)
         {
             List<string> interfacesNames = new List<string>();
-            List<ValidationTableEntry> validationEntries = new List<ValidationTableEntry>();
+            List<List<ValidationTableEntry>> validationEntries = new List<List<ValidationTableEntry>>();
 
             long lastGoodPosition = reader.BaseStream.Position;
             long originalPosition = reader.BaseStream.Position;
@@ -320,7 +351,6 @@ namespace ChromiumIPCSniffer.Mojo
 
             while (reader.BaseStream.Position - originalPosition < maxDistance && interfacesNames.Count < maxInterfaces)
             {
-
                 reader.SkipPadding();
                 string maybeInterfaceName = reader.PeekCString();
 
@@ -336,12 +366,20 @@ namespace ChromiumIPCSniffer.Mojo
                     reader.BaseStream.Position += 16;
                 }
 
-                List<ValidationTableEntry> entries = ReadValidationTable(reader, stopAtPadding: false);
-                if (entries.Count > 0)
+                // read tables
+                List<ValidationTableEntry> entries = new List<ValidationTableEntry>();
+                do
                 {
-                    validationEntries.AddRange(entries);
-                    lastGoodPosition = reader.BaseStream.Position;
-                }
+                    entries = ReadValidationTable(reader, stopAtPadding: true);
+                    if (entries.Count > 0)
+                    {
+                        validationEntries.Add(entries);
+                        lastGoodPosition = reader.BaseStream.Position;
+                    }
+
+                    reader.SkipPadding();
+
+                } while (entries.Count > 0);
 
             }
 
@@ -371,6 +409,43 @@ namespace ChromiumIPCSniffer.Mojo
 
                 methodsPerInterface[interfaceName].Item1.Add(method);
             }
+        }
+
+        public static List<List<ValidationTableEntry>> SplitValidationTable(List<ValidationTableEntry> validationEntries, string[] interfaces, int index)
+        {
+            int count = 0;
+            List<int> indexes = new List<int>();
+            for (int i = index; i < interfaces.Length; i++)
+            {
+                int interfaceMethodsCount = GetInterfaceMethods(interfaces[i]).Count;
+
+                indexes.Add(interfaceMethodsCount);
+
+                count += interfaceMethodsCount;
+                if (count == validationEntries.Count)
+                {
+                    // ok
+                    return Split(validationEntries, indexes.ToArray());
+                }
+            }
+
+            return null;
+        }
+
+
+        public static List<List<T>> Split<T>(List<T> source, params int[] sizes)
+        {
+            // TODO: Prepopulate with the right capacity
+            List<List<T>> ret = new List<List<T>>();
+
+            int currentIndex = 0;
+            for (int i = 0; i < sizes.Length; i++)
+            {
+                int size = sizes[i];
+                ret.Add(source.GetRange(currentIndex, size));
+                currentIndex += size;
+            }
+            return ret;
         }
 
         public static string ComputeSHA1OnFile(string filePath)

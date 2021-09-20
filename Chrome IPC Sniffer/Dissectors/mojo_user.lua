@@ -145,7 +145,8 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
             dataSubtree:add(link_field, link):set_text("[" .. link .. "]")
 
             if _is_response()() then
-                definition = definition:sub((definition:find("=>")))
+                arrow_location = definition:find("=>") -- note that the method definition may not contain '=>' in case we got the method hash wrong
+                definition = definition:sub((arrow_location))
             end
 
             dataSubtree:add(method, method_name):set_hidden()
@@ -203,6 +204,7 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
         local struct_version_or_array_length = buffer(offset + 4, 4):le_uint()
 
         if struct_header_length <= 0 then break end
+        if struct_header_length >= buffer:len() then break end
 
         -- align struct length to 8
         if struct_header_length % 8 ~= 0 then struct_header_length = struct_header_length + (8 - struct_header_length % 8) end

@@ -113,8 +113,7 @@ namespace ChromiumIPCSniffer.Mojo
         public static void DownloadAndAnalyzeMojomFiles(List<string> mojomFiles, string commit, string chromeVersion)
         {
             TextWriter textWriter = new StreamWriter(CACHE_FILENAME, false);
-            JsonWriter jsonWriter = new JsonTextWriter(textWriter);
-            jsonWriter.Formatting = Formatting.Indented;
+            JsonWriter jsonWriter = new JsonTextWriter(textWriter) { Formatting = Formatting.Indented };
             jsonWriter.WriteStartObject();
 
             jsonWriter.WritePropertyName("metadata");
