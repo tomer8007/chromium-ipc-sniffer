@@ -22,7 +22,7 @@ namespace ChromiumIPCSniffer.Mojo
         /// <summary>
         /// Finds method message names (scrambled DWORDs) and associates them with an interface name, out of chrome.dll
         /// </summary>
-        /// <param name="force">Set to true to scan the file even a cached result was found for it</param>
+        /// <param name="force">Set to true to scan the file even if a cached result was found for it</param>
         public static void ExtractMethodNames(string chromeDllPath, bool force = false)
         {
             Console.WriteLine("[+] Extracting scrambled message names from chrome.dll...");

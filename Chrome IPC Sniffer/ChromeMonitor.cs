@@ -92,8 +92,8 @@ namespace ChromiumIPCSniffer
             if (!commandLine.Contains("--type=")) type = ChromeProcessType.Broker;
             else if (commandLine.Contains("--extension-process") && !commandLine.Contains("--disable-databases")) type = ChromeProcessType.Extension;
             else if (commandLine.Contains("--type=watcher")) type = ChromeProcessType.Watcher;
-            else if (commandLine.Contains("--service-sandbox-type=audio")) type = ChromeProcessType.AudioService;
-            else if (commandLine.Contains("--service-sandbox-type=network")) type = ChromeProcessType.NetworkService;
+            else if (commandLine.Contains("--utility-sub-type=audio.mojom.AudioService")) type = ChromeProcessType.AudioService;
+            else if (commandLine.Contains("--utility-sub-type=network.mojom.NetworkService")) type = ChromeProcessType.NetworkService;
             else if (commandLine.Contains("--service-sandbox-type=cdm")) type = ChromeProcessType.ContentDecryptionModuleService;
             else if (commandLine.Contains("--type=gpu-process")) type = ChromeProcessType.GpuProcess;
             else if (commandLine.Contains("--type=renderer")) type = ChromeProcessType.Renderer;
