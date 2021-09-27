@@ -45,7 +45,7 @@ Wireshark should open automatically.
 
 _[P.S. The pipe `\\.\pipe\chromeipc` has nothing to do with Chrome itself, it's just where this tool will output its traffic to]_
 
-### Compiling it yourself
+## Compiling it yourself
 If you don't like pre-built binaries, you can clone and compile this repository at least using Visual Studio 2015. Note that it depends on the `Newtonsoft.Json` package.
 
 ## Advanced Usage
