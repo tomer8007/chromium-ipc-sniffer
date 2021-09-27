@@ -168,28 +168,17 @@ function get_message_class_name(class)
     local opcode_name = "Unknown"
 
     if class == 0 then opcode_name = "AutomationMsgStart" end
-    if class == 1 then opcode_name = "FrameMsgStart" end
-    if class == 2 then opcode_name = "TestMsgStart" end
-    if class == 3 then opcode_name = "WorkerMsgStart" end
-    if class == 4 then opcode_name = "NaClMsgStart" end
-    if class == 5 then opcode_name = "GpuChannelMsgStart" end
-    if class == 6 then opcode_name = "MediaMsgStart" end
-    if class == 7 then opcode_name = "PpapiMsgStart" end
-    if class == 8 then opcode_name = "ChromeMsgStart" end
-    if class == 9 then opcode_name = "PrintMsgStart" end
-    if class == 10 then opcode_name = "ExtensionMsgStart" end
-    if class == 11 then opcode_name = "ChromotingMsgStart" end
-    if class == 12 then opcode_name = "AndroidWebViewMsgStart" end
-    if class == 13 then opcode_name = "NaClHostMsgStart" end
-    if class == 14 then opcode_name = "EncryptedMediaMsgStart" end
-    if class == 15 then opcode_name = "GinJavaBridgeMsgStart" end
-    if class == 16 then opcode_name = "ChromeUtilityPrintingMsgStart" end
-    if class == 17 then opcode_name = "ExtensionsGuestViewMsgStart" end
-    if class == 18 then opcode_name = "GuestViewMsgStart" end
-    if class == 19 then opcode_name = "MediaPlayerDelegateMsgStart" end
-    if class == 20 then opcode_name = "ExtensionWorkerMsgStart" end
-    if class == 21 then opcode_name = "SubresourceFilterMsgStart" end
-    if class == 22 then opcode_name = "UnfreezableFrameMsgStart" end
+    if class == 1 then opcode_name = "TestMsgStart" end
+    if class == 2 then opcode_name = "WorkerMsgStart" end
+    if class == 3 then opcode_name = "NaClMsgStart" end
+    if class == 4 then opcode_name = "PpapiMsgStart" end
+    if class == 5 then opcode_name = "ExtensionMsgStart" end
+    if class == 6 then opcode_name = "ChromotingMsgStart" end
+    if class == 7 then opcode_name = "NaClHostMsgStart" end
+    if class == 8 then opcode_name = "EncryptedMediaMsgStart" end
+    if class == 9 then opcode_name = "GinJavaBridgeMsgStart" end
+    if class == 10 then opcode_name = "GuestViewMsgStart" end
+    if class == 11 then opcode_name = "ExtensionWorkerMsgStart" end
     
     return opcode_name
 end

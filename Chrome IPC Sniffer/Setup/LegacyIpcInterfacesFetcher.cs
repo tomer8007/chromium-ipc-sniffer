@@ -22,28 +22,17 @@ namespace ChromiumIPCSniffer
         public static string CACHE_FILENAME = @"Dissectors/helpers/legacy_ipc_interfaces.json";
         public static Dictionary<IPCMessageStart, string> messageFiles = new Dictionary<IPCMessageStart, string>
         {
-            { IPCMessageStart.FrameMsgStart, @"content/common/frame_messages.h"},
             { IPCMessageStart.TestMsgStart, @"ipc/ipc_sync_message_unittest.h"},
             { IPCMessageStart.WorkerMsgStart, @"ipc/ipc_channel_proxy_unittest_messages.h"},
             { IPCMessageStart.NaClMsgStart, @"components/nacl/common/nacl_messages.h"},
-            { IPCMessageStart.GpuChannelMsgStart, @"gpu/ipc/common/gpu_messages.h"},
-            { IPCMessageStart.MediaMsgStart, @"media/gpu/ipc/common/media_messages.h"},
             { IPCMessageStart.PpapiMsgStart, @"ppapi/proxy/ppapi_messages.h"},
-            { IPCMessageStart.ChromeMsgStart, @"chrome/common/render_messages.h"},
-            { IPCMessageStart.PrintMsgStart, @"components/printing/common/print_messages.h"},
             { IPCMessageStart.ExtensionMsgStart, @"extensions/common/extension_messages.h"},
             { IPCMessageStart.ChromotingMsgStart, @"remoting/host/chromoting_messages.h"},
-            { IPCMessageStart.AndroidWebViewMsgStart, @"android_webview/common/render_view_messages.h"},
             { IPCMessageStart.NaClHostMsgStart, @"components/nacl/common/nacl_host_messages.h"},
             { IPCMessageStart.EncryptedMediaMsgStart, @"components/cdm/common/cdm_messages_android.h"},
             { IPCMessageStart.GinJavaBridgeMsgStart, @"content/common/gin_java_bridge_messages.h"},
-            { IPCMessageStart.ChromeUtilityPrintingMsgStart, @"chrome/common/chrome_utility_printing_messages.h"},
-            { IPCMessageStart.ExtensionsGuestViewMsgStart, @"extensions/common/guest_view/extensions_guest_view_messages.h"},
             { IPCMessageStart.GuestViewMsgStart, @"components/guest_view/common/guest_view_messages.h"},
-            { IPCMessageStart.MediaPlayerDelegateMsgStart, @"content/common/media/media_player_delegate_messages.h"},
             { IPCMessageStart.ExtensionWorkerMsgStart, @"extensions/common/extension_messages.h"},
-            { IPCMessageStart.SubresourceFilterMsgStart, @"components/subresource_filter/content/common/subresource_filter_messages.h"},
-            { IPCMessageStart.UnfreezableFrameMsgStart, @"content/common/unfreezable_frame_messages.h"},
         };
 
         /// <summary>
@@ -214,28 +203,17 @@ namespace ChromiumIPCSniffer
         public enum IPCMessageStart
         {
             AutomationMsgStart = 0,
-            FrameMsgStart,
             TestMsgStart,
             WorkerMsgStart,
             NaClMsgStart,
-            GpuChannelMsgStart,
-            MediaMsgStart,
             PpapiMsgStart,
-            ChromeMsgStart,
-            PrintMsgStart,
             ExtensionMsgStart,
             ChromotingMsgStart,
-            AndroidWebViewMsgStart,
             NaClHostMsgStart,
             EncryptedMediaMsgStart,
             GinJavaBridgeMsgStart,
-            ChromeUtilityPrintingMsgStart,
-            ExtensionsGuestViewMsgStart,
             GuestViewMsgStart,
-            MediaPlayerDelegateMsgStart,
             ExtensionWorkerMsgStart,
-            SubresourceFilterMsgStart,
-            UnfreezableFrameMsgStart,
             LastIPCMsgStart  // Must come last.
         };
     }
