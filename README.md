@@ -100,7 +100,7 @@ Go to Edit -> Prefrences -> Protocols -> MOJOUSER -> Enable structs deep dissect
 
 ### What is `tdevmonc.sys`?
 `tdevmonc.sys` (or [Tibbo](https://tibbo.com/) Device Monitor) is a third-party kernel-mode driver that is used to capture the Named Pipe traffic.
-The reason to include it is to avoid the need to enable test signing or to tampter with chrome processes.
+The reason to include it is to avoid the need to enable test signing or to tamper with chrome processes.
 
 
 The driver works by `IoAttachDeviceToDeviceStack`ing on top of the `\Device\NamedPipe` device and acting as a filter driver. Then the data that is written to pipes is exposed to user mode using various IOCTLs.
