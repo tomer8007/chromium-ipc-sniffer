@@ -4,12 +4,12 @@ local common = require("helpers\\common")
 
 -- Channel Header fields
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/channel.h;l=95
-local num_bytes                             = ProtoField.uint32 ("mojo.numbytes"  , "Message Length"     , base.DEC)
-local num_header_bytes                      = ProtoField.uint16 ("mojo.numheaderbytes"       , "Generic Message Header Length"         , base.DEC)
-local message_type                          = ProtoField.uint16 ("mojo.type"       , "Message Type"         , base.DEC)
-local num_handles                           = ProtoField.uint16 ("mojo.numhandles"      , "Handles Count"        , base.DEC)
+local num_bytes                             = ProtoField.uint32 ("mojo.numbytes"  ,         "Message Length"     , base.DEC)
+local num_header_bytes                      = ProtoField.uint16 ("mojo.numheaderbytes",     "Generic Message Header Length"         , base.DEC)
+local message_type                          = ProtoField.uint16 ("mojo.type",               "Message Type"         , base.DEC)
+local num_handles                           = ProtoField.uint16 ("mojo.numhandles",         "Handles Count"        , base.DEC)
 local padding                               = ProtoField.new("Padding", "mojo.padding", ftypes.BYTES)
-local platform_handle                       = ProtoField.uint32 ("mojo.platformhandle"       , "Platform Handle"         , base.DEC)
+local platform_handle                       = ProtoField.uint32 ("mojo.platformhandle",     "Platform Handle"         , base.DEC)
 
 -- Normal Header fields
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/node_channel.cc;l=48
@@ -17,15 +17,17 @@ local normal_header_type                    = ProtoField.uint32 ("mojo.messagety
 local normal_header_padding                 = ProtoField.new("Padding", "mojo.normalpadding", ftypes.BYTES)
 
 -- Event Header fields
--- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/ports/event.cc;l=24
+-- https://source.chromium.org/chromium/chromium/src/+/main:mojo/core/ports/event.cc;l=24
 -- NodeController::OnEventMessage -> ports::Event::Deserialize
-local event_type                            = ProtoField.uint32 ("mojo.event.type"      , "Event Type"        , base.DEC)
-local event_padding                         = ProtoField.new("Padding", "mojo.event.padding", ftypes.BYTES)
-local event_port_name                       = ProtoField.new("Destination Port Name", "mojo.event.port", ftypes.BYTES)
+local event_type                            = ProtoField.uint32("mojo.event.type",     "Event Type",           base.DEC)
+local event_padding                         = ProtoField.new("Padding",                 "mojo.event.padding",   ftypes.BYTES)
+local event_port_name                       = ProtoField.new("Destination Port Name",   "mojo.event.port",      ftypes.BYTES)
+local event_src_port_name                   = ProtoField.new("Source Port Name",        "mojo.event.src_port",   ftypes.BYTES)
+local event_seqnum                          = ProtoField.uint64("mojo.event.seqnum",   "Control Sequence Number" , base.HEX)
 
 -- User Message Event Data fields
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/ports/event.cc;l=30
-local usermessage_seq_num                   = ProtoField.int64 ("mojo.um.seqnum"      , "Sequence Number"        , base.DEC)
+local usermessage_seq_num                   = ProtoField.uint64 ("mojo.um.seqnum"      , "Sequence Number"        , base.HEX)
 local usermessage_num_ports                 = ProtoField.uint32 ("mojo.um.numports"      , "Ports Count"        , base.DEC)
 local usermessage_padding                   = ProtoField.new("Padding", "mojo.um.padding", ftypes.BYTES)
 
@@ -84,6 +86,12 @@ local token                                 = ProtoField.new("Token Node Name", 
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/node_channel.cc;l=101
 local request_port_merge_connector          = ProtoField.new("Connector Port Name", "mojo.portmerge.connector", ftypes.BYTES)
 local request_port_merge_token              = ProtoField.new("Token String", "mojo.portmerge.token", ftypes.BYTES)
+
+-- Update Previous Peer Fields
+-- https://source.chromium.org/chromium/chromium/src/+/main:mojo/core/ports/event.cc;l=68
+local update_prev_peer_node        = ProtoField.new("New Node Name", "mojo.updatepeer.node", ftypes.BYTES)
+local update_prev_peer_port       = ProtoField.new("New Port Name", "mojo.updatepeer.port", ftypes.BYTES)
+
 
 -- Broker Message fields
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/broker_messages.h
@@ -168,7 +176,7 @@ mojocore_protocol.fields = {
   num_bytes, num_header_bytes, message_type, num_handles, padding, platform_handle,   -- Channel Header
   normal_header_type, normal_header_padding,                                          -- Normal Header
   broker_pipe_name_length, broker_bufffer_size, broker_guid,                              -- Broker Messages fields
-  event_type, event_padding, event_port_name,                                         -- Event Header
+  event_type, event_padding, event_port_name, event_src_port_name, event_seqnum,           -- Event Header
   usermessage_seq_num, usermessage_num_ports, usermessage_padding,                    -- User Message Event Data
   observe_proxy_node_name, observe_proxy_port_name, observe_proxy_target_node_name, observe_proxy_target_port_name, -- Observe Proxy Event Data
   observe_closure_last_sequence_number,                                                                             -- Observe Closure Event Data
@@ -192,6 +200,7 @@ mojocore_protocol.fields = {
   destination_node, relay_message_payload,                                                              -- Replay Message
   source_node, relayed_message_payload,                                                                 -- Relayed Message
   request_port_merge_connector, request_port_merge_token,                                               -- Request Port Merge
+  update_prev_peer_node, update_prev_peer_port,                                                         -- Update Previous Peer
   data,                                                                                                  -- Unparsed Data
 }
 
@@ -283,9 +292,11 @@ function mojocore_protocol.dissector(buffer, pinfo, tree)
             local eventSubtree = subtree:add(buffer(offset), "Event")
             local eventStartOffset = offset
 
-            eventSubtree:add_le(event_type,         buffer(offset,4)) :append_text(" (" .. get_event_type(_eventtype()()) .. ")");  offset = offset + 4
-            eventSubtree:add_le(event_padding,     buffer(offset,4));                                                               offset = offset + 4
-            eventSubtree:add_le(event_port_name,   buffer(offset,16));                                                              offset = offset + 16
+            eventSubtree:add_le(event_type,          buffer(offset,4)) :append_text(" (" .. get_event_type(_eventtype()()) .. ")");   offset = offset + 4
+            eventSubtree:add_le(event_padding,       buffer(offset,4));                                                               offset = offset + 4
+            eventSubtree:add_le(event_port_name,     buffer(offset,16));                                                              offset = offset + 16
+            eventSubtree:add_le(event_src_port_name, buffer(offset,16));                                                              offset = offset + 16
+            eventSubtree:add_le(event_seqnum,        buffer(offset,8));                                                               offset = offset + 8
 
             port_name_string = to_128bit_hex_string(buffer(offset-16 , 16))
             eventSubtree:append_text(", Type: " .. get_event_type(_eventtype()()) .. ", Port Name: " .. port_name_string)
@@ -385,6 +396,16 @@ function mojocore_protocol.dissector(buffer, pinfo, tree)
                 eventDataSubstree:add_le(merge_port_new_port_name,                   buffer(offset,16));                                        offset = offset + 16
                 local portSubtree = eventDataSubstree:add(buffer(offset), "New Port Descriptor ")
                 offset = read_port_descriptor(buffer(offset), portSubtree) + offset
+
+            elseif _eventtype()() == 8 then
+                -- Update Previous Peer
+
+                eventDataSubstree:append_text(" (Update Previous Peer)")
+                pinfo.cols.info = tostring(pinfo.cols.info) .. " Update Previous Peer"
+
+                eventDataSubstree:add_le(update_prev_peer_node,                   buffer(offset,16));                                        offset = offset + 16
+                eventDataSubstree:add_le(update_prev_peer_port,                   buffer(offset,16));                                        offset = offset + 16
+
 
             elseif offset == _numbytes()() then
                 eventDataSubstree:append_text(" (Empty)")
@@ -611,6 +632,7 @@ function get_event_type(type)
   if type == 5 then opcode_name = "kMergePort" end
   if type == 6 then opcode_name = "kUserMessageReadAckRequest" end
   if type == 7 then opcode_name = "kUserMessageReadAck" end
+  if type == 8 then opcode_name = "kUpdatePreviousPeer" end
   
   return opcode_name
 end

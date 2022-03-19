@@ -71,10 +71,9 @@ namespace ChromiumIPCSniffer
         public static void DownloadAndAnalyzeLegacyIpcFiles(Dictionary<IPCMessageStart, string> legacyIpcFiles, string commit, string chromeVersion)
         {
             TextWriter textWriter = new StreamWriter(CACHE_FILENAME, false);
-            JsonWriter jsonWriter = new JsonTextWriter(textWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
+            JsonWriter jsonWriter = new JsonTextWriter(textWriter) { Formatting = Formatting.Indented };
 
+            jsonWriter.WriteStartObject();
             jsonWriter.WritePropertyName("metadata");
             jsonWriter.WriteStartObject();
             jsonWriter.WritePropertyName("version"); jsonWriter.WriteValue(chromeVersion);
