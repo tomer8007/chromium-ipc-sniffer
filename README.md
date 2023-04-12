@@ -110,3 +110,9 @@ You can find sources for this driver [here](https://tibbo.com/downloads/archive/
 Note that this driver is used by [IO ninja](https://ioninja.com/), which is not entirely freeware.
 Also note this driver does not practically support unloading once it attaches to at least one device (you need to reboot).
 
+### I don't see Mojo packets. Why is that?
+Starting from Chrome v112, [ipcz](https://docs.google.com/document/d/1i49DF2af4JDspE1fTXuPrUvChQcqDChdHH6nx4xiyoY/edit?resourcekey=0-t_viq9NAbGb5kr_ni9scTA) is used as the underlying transport instead of Mojo Core. Unfortunately in this mode a lot of the interesting messages are going through shared memory and not names pipes, which means this tool will not see.
+
+You can force Chrome to use Mojo Core again by running it with these arguments:
+`chrome.exe --disable-features=MojoIpcz`
+
