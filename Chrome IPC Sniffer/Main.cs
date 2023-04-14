@@ -171,7 +171,10 @@ Available options:
     @Legacy IPC@legacyipc@[64764,57568,65535][0,0,0]
     @Mojo User@mojouser@[56026,61166,65535][0,0,0]
     @Mojo@mojo@[58596,65535,51143][0,0,0]
+    @IPCZ@ipcz@[65535,60652,52685][0,0,0]
     @NPFS@npfs@[59367,59110,65535][0,0,0]");
+
+                    // @IPCZ@ipcz@[57054,65535,58082][0,0,0]
                 }
                 catch (Exception)
                 {

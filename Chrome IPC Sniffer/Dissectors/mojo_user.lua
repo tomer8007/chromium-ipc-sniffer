@@ -23,6 +23,7 @@ local payload_pointer               = ProtoField.uint64 ("mojouser.payloadpointe
 local payload_interface_ids_pointer = ProtoField.uint64 ("mojouser.payloadinterfaceids"  , "Payload Interface IDs Pointer"     , base.DEC)
 local serialized_data_struct_header = ProtoField.new("Struct Header", "mojouser.structheader", ftypes.BYTES)
 local method_parameters             = ProtoField.new("Nested Struct/Array Parameter", "mojouser.parameters", ftypes.BYTES)
+local arguments_values              = ProtoField.new("Arguments Values", "mojouser.argumentsvalues", ftypes.BYTES)
 
 -- Flags
 local flag_expects_response         = ProtoField.bool("mojouser.expectsresponse", "Expects response", 32, {"This message expects a response", "This message does not expect a response"}, 0x1)
@@ -63,7 +64,7 @@ mojo_protocol.fields = {
     source_pid_type, dest_pid_type,
     num_bytes, version,
     interface_id, name, flags, trace_id, request_id, payload_pointer, payload_interface_ids_pointer, 
-    serialized_data_struct_header, method_parameters, struct_num_bytes, struct_version, struct_fields, array_num_bytes, array_elements_count,
+    serialized_data_struct_header, method_parameters, arguments_values, struct_num_bytes, struct_version, struct_fields, array_num_bytes, array_elements_count,
     flag_expects_response, flag_is_reponse, flag_is_sync, flag_namespace_bit,
     definition_field, link_field, legacy_ipc_field, method,                                                     -- Meta fields
 }
@@ -181,12 +182,12 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
 
     -- Read the arguments struct
     local structs_layout_map = {}
-    parametersSubtree = dataSubtree:add(buffer(offset), "Arguments Struct")
+    parametersSubtree = dataSubtree:add(buffer(offset), "Main Arguments Struct")
     parametersSubtree:add_le(struct_num_bytes, buffer(offset, 4));                              offset = offset + 4
     parametersSubtree:add_le(struct_version, buffer(offset, 4));                                offset = offset + 4
     if _struct_num_bytes()() > 8 then
         local fields_size = _struct_num_bytes()() - 8
-        local fields = parametersSubtree:add(buffer(offset, fields_size), "Argument Values");       
+        local fields = parametersSubtree:add(arguments_values, buffer(offset, fields_size));       
 
         if interface_resolved then
             structs_layout_map = read_struct_fields(fields, offset, buffer(offset), module_path, definition, _struct_num_bytes()(), true)
@@ -198,6 +199,7 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
 
     -- Read the nested structures/arrays
     local unknown_fields_offset = 0
+    local nestedParamsTree = dataSubtree:add(buffer(offset), "Nested structures and arrays")
     while (offset < length and length - offset > 4)  do
 
         local struct_header_length = buffer(offset, 4):le_uint()
@@ -209,12 +211,14 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
         -- align struct length to 8
         if struct_header_length % 8 ~= 0 then struct_header_length = struct_header_length + (8 - struct_header_length % 8) end
 
-        struct_tree = dataSubtree:add(method_parameters, buffer(offset, struct_header_length)); 
+        struct_tree = nestedParamsTree:add(method_parameters, buffer(offset, struct_header_length)); 
         
         local fields_data = buffer(offset + 8, struct_header_length - 8)
 
         structs_layout_map_2 = {}
         if structs_layout_map[offset] ~= nil then
+            -- we know what the definition of this field is.
+
             local field_definition = structs_layout_map[offset]
             local field_type = common.split(field_definition, " ")[1]
             local field_name = common.split(field_definition, " ")[2]
@@ -243,9 +247,24 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
             structs_layout_map = common.merge_tables(structs_layout_map, structs_layout_map_2);
         else
             -- this could be either a struct or an array
-            struct_tree:add_le(struct_num_bytes, buffer(offset, 4));                                                        offset = offset + 4
-            struct_tree:add_le(struct_version, buffer(offset, 4));                                                          offset = offset + 4
-            struct_tree:add(struct_fields, fields_data);            
+            -- let's do best effort
+            local num_elements_or_version = buffer(offset+4, 4):le_uint()
+            if num_elements_or_version > 4 then
+                -- looks like an array\string
+                local num_elements = buffer(offset+4, 4):le_uint()
+
+                struct_tree:add_le(array_num_bytes, buffer(offset, 4));                                                         offset = offset + 4
+                struct_tree:add_le(array_elements_count, buffer(offset, 4));                                                    offset = offset + 4
+                fields_tree = struct_tree:add(fields_data, "Array Elements");           
+
+                fields_tree:set_text("Text: " .. truncate_text(buffer(offset, num_elements):string()) .. "")
+
+            else
+                -- assume it's a struct
+                struct_tree:add_le(struct_num_bytes, buffer(offset, 4));                                                        offset = offset + 4
+                struct_tree:add_le(struct_version, buffer(offset, 4));                                                          offset = offset + 4
+                struct_tree:add(struct_fields, fields_data);            
+            end
 
             if unknown_fields_offset == 0 then unknown_fields_offset = offset end
         end
@@ -469,11 +488,7 @@ function read_field(tree, initial_offset, buffer, module_path, field_type, field
     elseif type_size ~= 0 then
         -- this is some basic type
 
-        fieldTree = tree:add(buffer(offset, type_size), field_type .. " " .. field_name)    
-
-        if field_name:find("is_key_frame") ~= nil then
-            print("it's " .. bool_bit)
-        end
+        fieldTree = tree:add(buffer(offset, type_size), field_type .. " " .. field_name)
 
         field_string = mojom_bytes_to_string(field_type, module_path, buffer(offset, type_size), bool_bit)
         if field_string ~= nil then

@@ -94,6 +94,9 @@
     <None Include="Dissectors\legacy_ipc.lua">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Dissectors\ipcz.lua">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Dissectors\npfs.lua">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
