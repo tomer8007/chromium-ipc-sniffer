@@ -15,7 +15,7 @@ local version            = ProtoField.uint8 ("ipcz.version"       , "Header Vers
 local message_id       = ProtoField.uint8 ("ipcz.messageid"       , "Message ID"         , base.DEC)
 local reserved       = ProtoField.new ("Reserved" , "ipcz.reserved"                     ,   ftypes.BYTES)
 local sequence_number = ProtoField.uint64 ("ipcz.seqnum"       , "Sequence Number"         , base.HEX)
-local driver_object_data_array = ProtoField.uint32 ("ipcz.driverobjectoffset"       , "Driver Object Data Array Offset"         , base.DEC)
+local driver_object_data_array = ProtoField.uint32 ("ipcz.driverobjectoffset"       , "Driver Object Data Array (Pointer)"         , base.DEC)
 local reserved2 = ProtoField.new ("Reserved 2" , "ipcz.reserved2"                     ,   ftypes.BYTES)
 
 local raw_data              = ProtoField.new("Raw Data", "ipcz.data", ftypes.BYTES)
@@ -45,11 +45,31 @@ local ap_pacel_fragment = ProtoField.new ("Shared Memory Fragment (Optional)", "
 local fragment_buffer_id = ProtoField.uint64 ("ipcz.buffid"       , "Fragment Buffer ID"         , base.HEX)
 local fragment_offset = ProtoField.uint32 ("ipcz.memoffset"       , "Fragment Begin Offset (Inside Shared Buffer)"         , base.HEX)
 local fragment_size = ProtoField.uint32 ("ipcz.fragsize"       , "Fragment Size"         , base.HEX)
-local parcel_data_aray = ProtoField.uint32 ("ipcz.paceldata"       , "Parcel Data Array (Pointer, Optional)"         , base.DEC)
+local parcel_data_array = ProtoField.uint32 ("ipcz.paceldata"       , "Parcel Data Array (Pointer)"         , base.DEC)
 local handles_types_array = ProtoField.uint32 ("ipcz.handletypes"       , "Handles Types Array (Pointer)"         , base.DEC)
-local routers_descriptors_array = ProtoField.uint32 ("ipcz.routers"       , "New Routers Descriptors Array (Pointer)"         , base.DEC)
+local routers_descriptors_array = ProtoField.uint32 ("ipcz.routers"       , "New Routers Array (Pointer)"         , base.DEC)
 local padding = ProtoField.new ("Padding", "ipcz.padding"         , ftypes.BYTES)
 local driver_objects_array = ProtoField.new ("Driver Objects Array ", "ipcz.driverobjects"         , ftypes.BYTES)
+local handle_type = ProtoField.uint32("ipcz.handletype", "Handle Type", base.DEC)
+
+-- Router Descriptor
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/router_descriptor.h;l=25
+local closed_peer_sequence_length = ProtoField.uint64("ipcz.router.peerseqlen", "Closed Peer Sequence Length", base.DEC)
+local new_sublink = ProtoField.uint64("ipcz.router.newsublink", "New Sub-Link", base.DEC)
+local new_link_state_fragment = ProtoField.new("New Link State Fragment", "ipcz.router.newlinkstate", ftypes.BYTES)
+local new_decaying_sublink = ProtoField.uint64("ipcz.router.newdecaysublink", "New Decaying Sub-Link", base.DEC)
+local next_outgoing_seqnum = ProtoField.uint64("ipcz.router.nextseqnum", "Next Outgoing Sequence Number", base.DEC)
+local num_bytes_produced = ProtoField.uint64("ipcz.router.bytesproduced", "Total Outgoing Bytes Produced", base.DEC)
+local next_incoming_sequence_number = ProtoField.uint64("ipcz.router.nextinseqnum", "Next Incoming Sequence Number", base.HEX)
+local decaying_incoming_sequence_length = ProtoField.uint64("ipcz.router.decayinseqnum", "Decaying Incoming Sequence Length", base.DEC)
+local num_bytes_consumed = ProtoField.uint64("ipcz.router.bytesconsumed", "Total Incoming Bytes Consumed", base.DEC)
+local router_flags             = ProtoField.uint32 ("ipcz.router.flags"          , "Flags"         , base.HEX)
+local flag_peer_closed = ProtoField.bool("ipcz.router.peerclosed", "peer_closed", 8, {"Other end of the route is closed", "Other end of the route is not known to be closed"}, 0x1)
+local flag_proxy_already_bypassed = ProtoField.bool("ipcz.router.proxybypass", "proxy_already_bypassed", 8, {"Proxy was already bypassed", "Proxy was not bypassed"}, 0x2)
+local router_reserved = ProtoField.new("Reserved", "ipcz.router.reserved", ftypes.BYTES) -- 7 bytes
+local proxy_peer_node_name = ProtoField.new("Proxy Peer Node Name", "ipcz.router.proxypeernodename", ftypes.BYTES)
+local proxy_peer_sublink = ProtoField.uint64("ipcz.router.proxypeersublink", "Proxy Peer Sublink", base.DEC)
+
 
 -- Route Closed
 local rc_sublink_id = ProtoField.uint64 ("ipcz.rc.sublinkid"       , "Sublink ID"         , base.HEX)
@@ -60,10 +80,11 @@ local rc_seqnum = ProtoField.uint64 ("ipcz.rc.seqnum"       , "Sequence Number" 
 ipcz_protocol.fields = {
   header_size, num_handles, total_size,   -- IpczHeader
   message_header_size, version, message_id, reserved, sequence_number, driver_object_data_array, reserved2,     -- Message Header
-  sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_aray, handles_types_array, routers_descriptors_array, padding, driver_objects_array,  -- Accept Parcel fields
+  sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
   rc_sublink_id, rc_seqnum,                                                                                   -- Route Closed
   struct_size, struct_version, array_size, array_numelements,                                                  -- Struct Header & Array Header
   first_object_index,  num_index,                                                                               -- DriverObjectArrayData
+  closed_peer_sequence_length, new_sublink, new_link_state_fragment, new_decaying_sublink, next_outgoing_seqnum, num_bytes_produced, next_incoming_sequence_number, decaying_incoming_sequence_length, num_bytes_consumed, router_flags, flag_peer_closed, flag_proxy_already_bypassed, router_reserved, proxy_peer_node_name, proxy_peer_sublink, -- Router Descriptor
   raw_data,                                                                                                      -- Extra Fields
 }
 
@@ -84,6 +105,9 @@ local _reserved2 = Field.new("ipcz.reserved2")
 
 -- Accept Parcel fields
 local _bufferid = Field.new("ipcz.buffid")
+local _parcel_data_offset = Field.new("ipcz.paceldata")
+local _handle_types_offset = Field.new("ipcz.handletypes")
+local _routers_offset = Field.new("ipcz.routers")
 
 
 function ipcz_protocol.dissector(buffer, pinfo, tree)
@@ -110,6 +134,7 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     message_size = _total_size()() - header_size_value
 
     local messageHeaderSubtree = subtree:add(buffer(offset, message_size), "Message Header")
+    local message_start_offset = offset
                     messageHeaderSubtree:add_le(message_header_size,      buffer(offset,1));              offset = offset + 1
                     messageHeaderSubtree:add_le(version,                   buffer(offset,1));             offset = offset + 1
     msg_id_tree =   messageHeaderSubtree:add_le(message_id,                buffer(offset,1));             offset = offset + 1
@@ -185,13 +210,11 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
 
         -- shared memory fragment
         local sharedMemoryTree = paramsTree:add(buffer(offset,16), "Shared Memory Fragment");            
-        sharedMemoryTree:add_le(fragment_buffer_id,  buffer(offset,8));             offset = offset + 8
-        sharedMemoryTree:add_le(fragment_offset,  buffer(offset,4));             offset = offset + 4
-        sharedMemoryTree:add_le(fragment_size,  buffer(offset,4));             offset = offset + 4
+        offset = read_fragment_descriptor(sharedMemoryTree, offset, buffer)
 
-        paramsTree:add_le(parcel_data_aray,  buffer(offset,4));             offset = offset + 4
-        paramsTree:add_le(handles_types_array,  buffer(offset,4));             offset = offset + 4
-        paramsTree:add_le(routers_descriptors_array,  buffer(offset,4));             offset = offset + 4
+        parcelDataTree = paramsTree:add_le(parcel_data_array,  buffer(offset,4));             offset = offset + 4
+        handleTypesTree = paramsTree:add_le(handles_types_array,  buffer(offset,4));             offset = offset + 4
+        routersTree = paramsTree:add_le(routers_descriptors_array,  buffer(offset,4));             offset = offset + 4
         paramsTree:add(padding,  buffer(offset,4));             offset = offset + 4
 
         driver_objects_tree = paramsTree:add(buffer(offset,8), "Driver Objects Array");  
@@ -203,20 +226,70 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         if not is_memory_fragment_null then
             pinfo.cols.info = tostring(pinfo.cols.info) .. " AcceptParcel (with shared memory fragment)"
         else
-            -- TODO: we'ere assuming the array will go here. This in fact depens on the offset inside parcel_data_aray
-            parcelDataArrayHeaderTree = arraysAreaTreee:add(buffer(offset, 8), "Parcel Data Array Header")
+            sharedMemoryTree:append_text(" [NULL]")
+        end
 
-            parcel_length = buffer(offset+4,4):le_uint()
-            offset = read_array_header(parcelDataArrayHeaderTree, offset, buffer)
+        -- Now take care of the possible arrays in the arrays area
 
-           if parcel_length > 4 then
-                Dissector.get("mojouser"):call(buffer(offset, parcel_length):tvb(), pinfo, tree)
+        if _parcel_data_offset()() > 0 and is_memory_fragment_null then
+            local offset2 = message_start_offset + _parcel_data_offset()()
+            parcelDataArrayHeaderTree = arraysAreaTreee:add(buffer(offset2, 8), "Parcel Data Array Header")
+
+            parcel_length = buffer(offset2+4,4):le_uint()
+            offset2 = read_array_header(parcelDataArrayHeaderTree, offset2, buffer)
+
+            if parcel_length > 4 then
+                Dissector.get("mojouser"):call(buffer(offset2, parcel_length):tvb(), pinfo, tree)
             else
                 -- I don't know what's this
                 pinfo.cols.info = tostring(pinfo.cols.info) .. " Data"
-                Dissector.get("data"):call(buffer(offset, parcel_length):tvb(), pinfo, tree)
+                Dissector.get("data"):call(buffer(offset2, parcel_length):tvb(), pinfo, tree)
             end
+        elseif _parcel_data_offset()() == 0 then
+            parcelDataTree:append_text(" [NULL]")
         end
+
+        if _handle_types_offset()() > 0 then
+            offset2 = message_start_offset + _handle_types_offset()()
+
+            local array_length = buffer(offset2, 4):le_uint()
+            local num_elements = buffer(offset2+4,4):le_uint()
+            handleTypesArrayTree = arraysAreaTreee:add(buffer(offset2, array_length), "Handle Types Array")
+            offset2 = read_array_header(handleTypesArrayTree, offset2, buffer)
+
+             -- read the handle types array contents
+            local handle_index = 0
+            while (handle_index < num_elements) do
+                handle_type_value = buffer(offset2, 4):le_uint()
+                handleTypesArrayTree:add_le(handle_type, buffer(offset2, 4)):append_text(" [" .. get_handle_type(handle_type_value) .. "]");  offset2 = offset2 + 4
+
+                handle_index = handle_index + 1
+            end
+        else
+            handleTypesTree:append_text(" [NULL]")
+        end
+
+        if _routers_offset()() > 0 then
+            offset2 = message_start_offset + _routers_offset()()
+
+            local array_length = buffer(offset2, 4):le_uint()
+            local num_elements = buffer(offset2+4,4):le_uint()
+            routersArrayTree = arraysAreaTreee:add(buffer(offset2, array_length), "New Routers Array")
+            offset2 = read_array_header(routersArrayTree, offset2, buffer)
+
+            -- read the routers array contents
+            local router_descriptor_size = 112
+            local router_index = 0
+            while (router_index < num_elements) do
+                
+                local routerTree = routersArrayTree:add(buffer(offset2, router_descriptor_size), "Router #" .. (router_index+1))
+                offset2 = read_router_descriptor(routerTree, offset2, buffer)
+                router_index = router_index + 1
+            end
+        else
+            routersTree:append_text(" [NULL]")
+        end
+        
 
     elseif _msg_id()() == 21 then
         -- AcceptParcelDriverObjects
@@ -274,11 +347,57 @@ function read_DriverObjectArrayData( subtree, offset, buffer )
     return offset
 end
 
+function read_fragment_descriptor(subtree, offset, buffer)
+    subtree:add_le(fragment_buffer_id,  buffer(offset,8));             offset = offset + 8
+    subtree:add_le(fragment_offset,  buffer(offset,4));             offset = offset + 4
+    subtree:add_le(fragment_size,  buffer(offset,4));             offset = offset + 4
+
+    return offset
+end
+
 function read_array_header( subtree, offset, buffer )
 	subtree:add_le(array_size, buffer(offset, 4));        offset = offset + 4
     subtree:add_le(array_numelements, buffer(offset, 4));                 offset = offset + 4
 
     return offset
+end
+
+function read_router_descriptor(subtree, offset, buffer)
+    subtree:add_le(closed_peer_sequence_length, buffer(offset, 8));        offset = offset + 8
+    subtree:add_le(new_sublink, buffer(offset, 8));                 offset = offset + 8
+    local newFragmentTree = subtree:add(new_link_state_fragment, buffer(offset, 16));
+    offset = read_fragment_descriptor(newFragmentTree, offset, buffer)
+    subtree:add_le(new_decaying_sublink, buffer(offset, 8));                 offset = offset + 8
+    subtree:add_le(next_outgoing_seqnum, buffer(offset, 8));                 offset = offset + 8
+    subtree:add_le(num_bytes_produced, buffer(offset, 8));                 offset = offset + 8
+    subtree:add_le(next_incoming_sequence_number, buffer(offset, 8));                 offset = offset + 8
+    subtree:add_le(decaying_incoming_sequence_length, buffer(offset, 8));                 offset = offset + 8
+    subtree:add_le(num_bytes_consumed, buffer(offset, 8));                 offset = offset + 8
+
+    local flagsTree = subtree:add(router_flags, buffer(offset, 1));            
+    flagsTree:add_le(flag_peer_closed, buffer(offset, 1))
+    flagsTree:add_le(flag_proxy_already_bypassed, buffer(offset, 1))
+    offset = offset + 1
+
+    subtree:add(router_reserved, buffer(offset, 7));       offset = offset + 7
+    subtree:add(proxy_peer_node_name, buffer(offset, 16));                 offset = offset + 16
+    subtree:add_le(proxy_peer_sublink, buffer(offset, 8));                 offset = offset + 8
+
+    return offset
+end
+
+function get_handle_type(type_id)
+    --
+    -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/handle_type.h
+    --
+    local handle_type = "Unknown"
+
+    if type_id == 0 then handle_type = "kPortal" end
+    if type_id == 1 then handle_type = "kBoxedDriverObject" end
+    if type_id == 2 then handle_type = "kRelayedBoxedDriverObject" end
+    if type_id == 3 then handle_type = "kBoxedSubparcel" end
+
+    return handle_type
 end
 
 
