@@ -45,11 +45,15 @@ local ap_pacel_fragment = ProtoField.new ("Shared Memory Fragment (Optional)", "
 local fragment_buffer_id = ProtoField.uint64 ("ipcz.buffid"       , "Fragment Buffer ID"         , base.HEX)
 local fragment_offset = ProtoField.uint32 ("ipcz.memoffset"       , "Fragment Begin Offset (Inside Shared Buffer)"         , base.HEX)
 local fragment_size = ProtoField.uint32 ("ipcz.fragsize"       , "Fragment Size"         , base.HEX)
-local parcel_data_aray = ProtoField.uint32 ("ipcz.paceldata"       , "Parcel Data Array (Pointer, Optional)"         , base.HEX)
-local handles_types_array = ProtoField.uint32 ("ipcz.handletypes"       , "Handles Types Array (Pointer)"         , base.HEX)
-local routers_descriptors_array = ProtoField.uint32 ("ipcz.routers"       , "New Routers Descriptors Array (Pointer)"         , base.HEX)
+local parcel_data_aray = ProtoField.uint32 ("ipcz.paceldata"       , "Parcel Data Array (Pointer, Optional)"         , base.DEC)
+local handles_types_array = ProtoField.uint32 ("ipcz.handletypes"       , "Handles Types Array (Pointer)"         , base.DEC)
+local routers_descriptors_array = ProtoField.uint32 ("ipcz.routers"       , "New Routers Descriptors Array (Pointer)"         , base.DEC)
 local padding = ProtoField.new ("Padding", "ipcz.padding"         , ftypes.BYTES)
 local driver_objects_array = ProtoField.new ("Driver Objects Array ", "ipcz.driverobjects"         , ftypes.BYTES)
+
+-- Route Closed
+local rc_sublink_id = ProtoField.uint64 ("ipcz.rc.sublinkid"       , "Sublink ID"         , base.HEX)
+local rc_seqnum = ProtoField.uint64 ("ipcz.rc.seqnum"       , "Sequence Number"         , base.HEX)
 
 
 
@@ -57,6 +61,7 @@ ipcz_protocol.fields = {
   header_size, num_handles, total_size,   -- IpczHeader
   message_header_size, version, message_id, reserved, sequence_number, driver_object_data_array, reserved2,     -- Message Header
   sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_aray, handles_types_array, routers_descriptors_array, padding, driver_objects_array,  -- Accept Parcel fields
+  rc_sublink_id, rc_seqnum,                                                                                   -- Route Closed
   struct_size, struct_version, array_size, array_numelements,                                                  -- Struct Header & Array Header
   first_object_index,  num_index,                                                                               -- DriverObjectArrayData
   raw_data,                                                                                                      -- Extra Fields
@@ -67,6 +72,8 @@ ipcz_protocol.experts = {expert_info_pipeerror}
 local _header_size = Field.new("ipcz.headersize")
 local _num_handles = Field.new("ipcz.numhandles")
 local _total_size = Field.new("ipcz.totalsize")
+
+local _msg_hdr_size = Field.new("ipcz.structsize")
 
 local _msg_header_size = Field.new("ipcz.msgheadersize")
 local _version = Field.new("ipcz.version")
@@ -124,7 +131,9 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     eventDataSubstree:add_le(struct_size, buffer(offset, 4));                 offset = offset + 4
     eventDataSubstree:add_le(struct_version, buffer(offset, 4));                 offset = offset + 4
 
-    paramsTree = eventDataSubstree:add(buffer(offset), "Serialized Parameters")
+    eventDataSubstree:set_len(_msg_hdr_size()())
+
+    paramsTree = eventDataSubstree:add(buffer(offset, _msg_hdr_size()() - 8), "Serialized Parameters")
 
     -- Now message ID dispatching, based on 
     -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h
@@ -185,17 +194,28 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         paramsTree:add_le(routers_descriptors_array,  buffer(offset,4));             offset = offset + 4
         paramsTree:add(padding,  buffer(offset,4));             offset = offset + 4
 
-        driver_objects_tree = paramsTree:add(buffer(offset,4), "Driver Objects Array");  
+        driver_objects_tree = paramsTree:add(buffer(offset,8), "Driver Objects Array");  
         offset = read_DriverObjectArrayData(driver_objects_tree, offset, buffer)
+
+        arraysAreaTreee = subtree:add(buffer(offset), "Message Data Arrays Area")
+
         local is_memory_fragment_null = _bufferid()() > 100000000 -- actually should be == 0xffffffffffffffff
         if not is_memory_fragment_null then
             pinfo.cols.info = tostring(pinfo.cols.info) .. " AcceptParcel (with shared memory fragment)"
         else
             -- TODO: we'ere assuming the array will go here. This in fact depens on the offset inside parcel_data_aray
-            parcelDataArrayHeaderTree = paramsTree:add(buffer(offset, 8), "Parcel Data Array Header")
+            parcelDataArrayHeaderTree = arraysAreaTreee:add(buffer(offset, 8), "Parcel Data Array Header")
+
+            parcel_length = buffer(offset+4,4):le_uint()
             offset = read_array_header(parcelDataArrayHeaderTree, offset, buffer)
 
-           Dissector.get("mojouser"):call(buffer(offset):tvb(), pinfo, tree)
+           if parcel_length > 4 then
+                Dissector.get("mojouser"):call(buffer(offset, parcel_length):tvb(), pinfo, tree)
+            else
+                -- I don't know what's this
+                pinfo.cols.info = tostring(pinfo.cols.info) .. " Data"
+                Dissector.get("data"):call(buffer(offset, parcel_length):tvb(), pinfo, tree)
+            end
         end
 
     elseif _msg_id()() == 21 then
@@ -204,6 +224,9 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 22 then
         -- RouteClosed
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RouteClosed"
+        paramsTree:add_le(rc_sublink_id,  buffer(offset,8));             offset = offset + 8
+        paramsTree:add_le(rc_seqnum,  buffer(offset,8));             offset = offset + 8
+
     elseif _msg_id()() == 23 then
         -- RouteDisconnected
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RouteDisconnected"

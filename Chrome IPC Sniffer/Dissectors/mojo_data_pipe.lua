@@ -2,7 +2,7 @@ mojodata_protocol = Proto("MOJODATA",  "Mojo Data Pipe Control")
 
 -- Header fields
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/data_pipe_control_message.cc;l=14
--- https://source.chromium.org/chromium/chromium/src/+/master:mojo/core/data_pipe_control_message.h;l=29
+-- https://source.chromium.org/chromium/chromium/src/+/main:mojo/core/data_pipe_control_message.h;l=27
 local command           = ProtoField.int32 ("mojodata.command"              , "Control Command"     , base.DEC)
 local num_bytes         = ProtoField.int32 ("mojodata.num_bytes"       , "Number Of Bytes Passed"         , base.DEC)
 
