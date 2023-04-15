@@ -10,8 +10,8 @@ local mojo_interfaces_info = common.json_to_table(mojo_interface_json)
 -- https://docs.google.com/document/d/13pv9cFh5YKuBggDBQ1-AL8VReF-IYpFOFpRfvWFrwio/edit
 
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/public/cpp/bindings/lib/bindings_internal.h;l=96
-local num_bytes                     = ProtoField.uint32 ("mojouser.numbytes"  , "Binded Message Length"     , base.DEC)
-local version                       = ProtoField.uint32 ("mojouser.version"  , "Binded Message Protocol Version"     , base.DEC)
+local num_bytes                     = ProtoField.uint32 ("mojouser.numbytes"  , "Header Length"     , base.DEC)
+local version                       = ProtoField.uint32 ("mojouser.version"  , "Header Protocol Version"     , base.DEC)
 
 -- https://source.chromium.org/chromium/chromium/src/+/master:mojo/public/cpp/bindings/lib/message_internal.h;l=28
 local interface_id                  = ProtoField.uint32 ("mojouser.interfaceid"  , "Interface ID"     , base.HEX)
@@ -98,29 +98,33 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
 
     -- Header
     local offset = 0
-    subtree:add_le(num_bytes,                           buffer(offset,4));                                         offset = offset + 4
-    subtree:add_le(version,                             buffer(offset,4));                                         offset = offset + 4
-    interfaceIdTree = subtree:add(interface_id,         buffer(offset,4));                                                 
+    structHeaderTree = subtree:add(buffer(offset), "Message Header")
+    structHeaderTree:add_le(num_bytes,                           buffer(offset,4));                                         offset = offset + 4
+    structHeaderTree:add_le(version,                             buffer(offset,4));                                         offset = offset + 4
+
+    structHeaderTree:set_len(_numbytes()())
+
+    interfaceIdTree = structHeaderTree:add(interface_id,         buffer(offset,4));                                                 
     interfaceIdTree:add_le(flag_namespace_bit,          buffer(offset, 4))                                         offset = offset + 4
-    name_subtree = subtree:add_le(name,                 buffer(offset,4));                                         offset = offset + 4
+    name_subtree = structHeaderTree:add_le(name,                 buffer(offset,4));                                         offset = offset + 4
 
     if _interfaceid()() == 0x00000000 then
         interfaceIdTree:append_text(" (Master Interface)")
     end
 
     -- Flags
-    local flagsSubtree = subtree:add(flags,             buffer(offset, 4))
+    local flagsSubtree = structHeaderTree:add(flags,             buffer(offset, 4))
     flagsSubtree:add_le(flag_expects_response,          buffer(offset, 4))       
     flagsSubtree:add_le(flag_is_reponse,                buffer(offset, 4))
     flagsSubtree:add_le(flag_is_sync,                   buffer(offset, 4))                                                    
     flagsSubtree:set_len(4)                                                                                        offset  = offset + 4
-    subtree:add_le(trace_id,                            buffer(offset,4));                                         offset = offset + 4
+    structHeaderTree:add_le(trace_id,                            buffer(offset,4));                                         offset = offset + 4
     if _version()() >= 1 then
-        subtree:add_le(request_id,                      buffer(offset,8));                                         offset = offset + 8
+        structHeaderTree:add_le(request_id,                      buffer(offset,8));                                         offset = offset + 8
     end
     if _version()() >= 2 then
-        subtree:add_le(payload_pointer,                 buffer(offset,8));                                         offset = offset + 8
-        subtree:add_le(payload_interface_ids_pointer,   buffer(offset,8));                                         offset = offset + 8
+        structHeaderTree:add_le(payload_pointer,                 buffer(offset,8));                                         offset = offset + 8
+        structHeaderTree:add_le(payload_interface_ids_pointer,   buffer(offset,8));                                         offset = offset + 8
     end
 
     dataSubtree = subtree:add(buffer(offset), "Serialized Arguments (Payload)")
