@@ -122,6 +122,20 @@ local shared_buffer_buffer_mode = ProtoField.uint32("ipcz.sharedbuffer.mode", "M
 local shared_buffer_padding = ProtoField.new("Padding", "ipcz.sharedbuffer.padding", ftypes.BYTES) -- 4 bytes
 local shared_buffer_guid = ProtoField.new("Identifying GUID", "ipcz.sharedbuffer.guid", ftypes.GUID) -- 8 bytes
 
+-- TransportHeader
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/transport.cc;l=105;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
+local transport_destination_type = ProtoField.uint32("ipcz.transport.destinationtype", "Destination Type", base.DEC)
+local transport_is_same_remote_process = ProtoField.uint8("ipcz.transport.issameremoteprocess", "Is same remote process", base.DEC)
+local transport_is_peer_trusted = ProtoField.uint8("ipcz.transport.ispeertrusted", "Is peer trusted", base.DEC)
+local transport_is_trusted_by_peer = ProtoField.uint8("ipcz.transport.istrustedbypeer", "Is trusted by peer", base.DEC)
+local transport_padding = ProtoField.new("Padding", "ipcz.transport.padding", ftypes.BYTES) -- 1 bytes
+
+-- WrappedPlatformHandleHeader
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/wrapped_platform_handle.cc;l=56;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
+local wrapped_handle_size = ProtoField.uint32("ipcz.wrappedhandle.headersize", "Header Size", base.DEC)
+local wrapped_handle_type = ProtoField.uint32("ipcz.wrappedhandle.type", "Wrapped Handle Type", base.DEC)
+
+
 
 ipcz_protocol.fields = {
   header_size, num_handles, total_size,   -- IpczHeader
@@ -138,6 +152,8 @@ ipcz_protocol.fields = {
   data_pipe_header_size, data_pipe_endpoint_type, data_pipe_element_size, data_pipe_padding, data_pipe_ring_buffer_state,    -- DataPipeHeader
   ring_buffer_offset, ring_buffer_size,                                                                             -- RingBuffer::SerializedState
   shared_buffer_header_size, shared_buffer_buffer_size, shared_buffer_buffer_mode, shared_buffer_padding, shared_buffer_guid,    -- SharedBuffer's BufferHeader
+  transport_destination_type, transport_is_same_remote_process, transport_is_peer_trusted, transport_is_trusted_by_peer, transport_padding, -- TransportHeader
+  wrapped_handle_size, wrapped_handle_type,                                                                     -- WrappedPlatformHandleHeader
   raw_data,                                                                                                      -- Extra Fields
 }
 
@@ -532,11 +548,13 @@ function read_mojo_driver_object_data(subtree, offset, buffer, object_length)
     end
     local handles_area_size = handle_size * num_handles_value
 
-    local driverObjectBodyTree = subtree:add(buffer(offset, object_length - header_length - handles_area_size), "Driver Object Body (" .. get_driver_object_type(driver_type_value) .. ")")
+    local driver_body_size = object_length - header_length - handles_area_size
+    local driverObjectBodyTree = subtree:add(buffer(offset, driver_body_size), "Driver Object Body (" .. get_driver_object_type(driver_type_value) .. ")")
     
     -- Now read the driver object data according to its Type
     if driver_type_value == 0 then
         -- kTransport
+        offset = read_transport(driverObjectBodyTree, offset, buffer, driver_body_size)
     elseif driver_type_value == 1 then
         -- kSharedBuffer
         offset = read_shared_buffer(driverObjectBodyTree, offset, buffer)
@@ -544,6 +562,12 @@ function read_mojo_driver_object_data(subtree, offset, buffer, object_length)
         -- kTransmissiblePlatformHandle
     elseif driver_type_value == 4 then
         -- kWrappedPlatformHandle
+        local wrapped_header_length_value = buffer(offset,4):le_uint()
+        local wrappedHandleTree = driverObjectBodyTree:add(buffer(offset, wrapped_header_length_value), "Wrapped Platform Handle Header")
+        wrappedHandleTree:add_le(wrapped_handle_size, buffer(offset, 4));                                                     offset = offset + 4
+        wrappedHandleTree:add_le(wrapped_handle_type, buffer(offset, 4)):append_text(" [kTransmissible]");                    offset = offset + 4 -- should always be 0 on Windows
+
+        
     elseif driver_type_value == 5 then
         -- DataPipe
         offset = read_datapipe(driverObjectBodyTree, offset, buffer)
@@ -574,6 +598,22 @@ function read_datapipe(subtree, offset, buffer)
 
 end
 
+function read_transport(subtree, offset, buffer, object_length)
+
+    local headerTree = subtree:add(buffer(offset, object_length), "Transport Header")
+
+    local transportTypeTree = headerTree:add_le(transport_destination_type, buffer(offset, 4)); 
+    local transport_type_value = buffer(offset, 4):le_uint();                                            offset = offset + 4
+    headerTree:add_le(transport_is_same_remote_process, buffer(offset, 1));                              offset = offset + 1
+    headerTree:add_le(transport_is_peer_trusted, buffer(offset, 1));                              offset = offset + 1
+    headerTree:add_le(transport_is_trusted_by_peer, buffer(offset, 1));                              offset = offset + 1
+    headerTree:add(transport_padding, buffer(offset, 1));                                            offset = offset + 1
+
+    transportTypeTree:append_text(" [" .. get_transport_endpoint_type(transport_type_value) .. "]")
+
+    return offset
+end
+
 function read_shared_buffer(subtree, offset, buffer)
     local shared_buffer_header_length = buffer(offset,4):le_uint()
     local sharedBufferTree = subtree:add(buffer(offset, shared_buffer_header_length), "Shared Buffer Header")
@@ -597,6 +637,18 @@ function get_datapipe_endpoint_type(type_id)
 
     if type_id == 0 then handle_type = "kProducer" end
     if type_id == 1 then handle_type = "kConsumer" end
+
+    return handle_type
+end
+
+function get_transport_endpoint_type(type_id)
+    --
+    -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/transport.h;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=34
+    --
+    local handle_type = "Unknown"
+
+    if type_id == 0 then handle_type = "kBroker" end
+    if type_id == 1 then handle_type = "kNonBroker" end
 
     return handle_type
 end
