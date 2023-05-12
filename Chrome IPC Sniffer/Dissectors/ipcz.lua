@@ -3,7 +3,7 @@ ipcz_protocol = Proto("IPCZ",  "IPCZ Protocol")
 local get_chrome_name = require("helpers\\common").get_chrome_type_name
 
 -- IpczHeader fields
--- https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:gen/amd64-generic/chroot/build/amd64-generic/usr/include/libchrome/mojo/core/channel.h;l=135?q=ipczHeader
+-- https://source.chromium.org/chromiumos/chromiumos/codesearch/+/main:src/platform/libchrome/mojo/core/channel.h;l=135?q=IpczHeader
 local header_size                  = ProtoField.int16 ("ipcz.headersize"             , "Header Size"     , base.DEC)
 local num_handles            = ProtoField.int32 ("ipcz.numhandles"       , "Handles Count"         , base.DEC)
 local total_size       = ProtoField.int32 ("ipcz.totalsize"       , "Total Message Size"         , base.DEC)
@@ -117,7 +117,7 @@ local ring_buffer_size = ProtoField.uint32("ipcz.datapipe.size", "Ring Buffer Si
 -- SharedBuffer's BufferHeader
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/shared_buffer.cc;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=29
 local shared_buffer_header_size = ProtoField.uint32("ipcz.sharedbuffer.headersize", "Header Size", base.DEC)
-local shared_buffer_buffer_size = ProtoField.uint32("ipcz.sharedbuffer.buffersize", "Buffer Size", base.DEC)
+local shared_buffer_buffer_size = ProtoField.uint32("ipcz.sharedbuffer.buffersize", "Buffer Size", base.HEX)
 local shared_buffer_buffer_mode = ProtoField.uint32("ipcz.sharedbuffer.mode", "Mode", base.DEC)
 local shared_buffer_padding = ProtoField.new("Padding", "ipcz.sharedbuffer.padding", ftypes.BYTES) -- 4 bytes
 local shared_buffer_guid = ProtoField.new("Identifying GUID", "ipcz.sharedbuffer.guid", ftypes.GUID) -- 8 bytes
@@ -426,18 +426,23 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         pinfo.cols.info = tostring(pinfo.cols.info) .. " AcceptRelayedMessage"
     end
 
+    --
+    -- Handle attached driver objects
+    --
+
+    local num_drivers = 0
     local driver_data_arrays = {}
     if _driverobjectsoffset()() > 0 then
         local offset2 = message_start_offset + _driverobjectsoffset()()
         local array_length = buffer(offset2,4):le_uint()
-        local num_drivers = buffer(offset2+4,4):le_uint()
+        num_drivers = buffer(offset2+4,4):le_uint()
 
         local driverObjectsTree = paramsTree:add(buffer(offset2, array_length), "Driver Objects Array (pointer: " .. _driverobjectsoffset()() .. ")")
         local driverObjectsArrayHeaderTree = driverObjectsTree:add(buffer(offset2, 8), "Array Header")
         offset2 = read_array_header(driverObjectsArrayHeaderTree, offset2, buffer)
 
         -- read the driver objects array contents
-        local driverObjectsTree = driverObjectsTree:add(buffer(offset2, array_length-8), "Array Contents")
+        -- local driverObjectsTree = driverObjectsTree:add(buffer(offset2, array_length-8), "Array Contents")
         local driver_descriptor_size = 8
         local driver_index = 0
         while (driver_index < num_drivers) do
@@ -448,18 +453,22 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         end
 
         for index, driver_data_array_offset in ipairs(driver_data_arrays) do
-            local array_length = buffer(offset2,4):le_uint()
-            local num_bytes = buffer(offset2+4,4):le_uint()
-            local driverDataArrayTree = paramsTree:add(buffer(offset2, array_length), "Driver #" .. (index) .. " Data Array (pointer: " .. driver_data_array_offset .. ")")
-            local driverDataArrayHeaderTree = driverDataArrayTree:add(buffer(offset2, 8), "Array Header")
-            offset2 = read_array_header(driverDataArrayHeaderTree, offset2, buffer)
+
+            local offset3 = message_start_offset + driver_data_array_offset
+            local array_length = buffer(offset3,4):le_uint()
+            local num_bytes = buffer(offset3+4,4):le_uint()
+            local driverDataArrayTree = paramsTree:add(buffer(offset3, array_length), "Driver #" .. (index) .. " Data Array (pointer: " .. driver_data_array_offset .. ")")
+            local driverDataArrayHeaderTree = driverDataArrayTree:add(buffer(offset3, 8), "Array Header")
+            offset3 = read_array_header(driverDataArrayHeaderTree, offset3, buffer)
 
             -- we assume this is the Mojo IpzDriver
-            local driverArrayContetnsTree = driverDataArrayTree:add(buffer(offset2, num_bytes), "Array Contents (driver-specific serialization)")
-            offset2, drivers_num_handles = read_mojo_driver_object_data(driverArrayContetnsTree, offset2, buffer, num_bytes) 
+            local driverArrayContetnsTree = driverDataArrayTree:add(buffer(offset3, num_bytes), "Array Contents (driver-specific serialization)")
+            offset3, drivers_num_handles = read_mojo_driver_object_data(driverArrayContetnsTree, offset3, buffer, num_bytes) 
         end
 
     end
+
+    subtree:append_text(", Attached Driver Objects: " .. num_drivers)
 
 end
 
