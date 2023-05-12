@@ -91,6 +91,37 @@ local rm_padding = ProtoField.new ("Padding", "ipcz.rm.padding"         , ftypes
 local rm_driver_object_array = ProtoField.new ("Driver Objects Range Info", "ipcz.rm.driverobject"         , ftypes.BYTES)
 
 
+-- Serialized driver/transport objects
+-- Object Header
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/transport.cc;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=83
+local driver_header_size = ProtoField.uint32("ipcz.driver.headersize", "Header Size", base.DEC)
+local driver_type = ProtoField.uint32("ipcz.driver.type", "Driver Object Type", base.DEC)
+local driver_num_handles = ProtoField.uint32("ipcz.driver.numhandles", "Handles Count", base.DEC)
+local driver_handle_owner = ProtoField.uint8("ipcz.driver.handleowner", "Handle Owner", base.DEC)
+local driver_padding = ProtoField.new ("Padding", "ipcz.driver.padding"         , ftypes.BYTES) -- 3 bytes
+local driver_object_body = ProtoField.new ("Driver Object Body", "ipcz.driver.body"         , ftypes.BYTES)
+
+-- DataPipeHeader
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/data_pipe.cc;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=29
+local data_pipe_header_size = ProtoField.uint32("ipcz.datapipe.headersize", "Header Size", base.DEC)
+local data_pipe_endpoint_type = ProtoField.uint32("ipcz.datapipe.endpointtype", "Endpoint Type", base.DEC)
+local data_pipe_element_size = ProtoField.uint32("ipcz.datapipe.elementsize", "Element Size", base.DEC)
+local data_pipe_padding = ProtoField.new("Padding", "ipcz.datapipe.padding", ftypes.BYTES) -- 4 bytes
+local data_pipe_ring_buffer_state = ProtoField.new("Ring Buffer State", "ipcz.datapipe.ringbufferstate", ftypes.BYTES) -- 8 bytes
+
+-- RingBuffer::SerializedState
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/ring_buffer.h;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=151
+local ring_buffer_offset = ProtoField.uint32("ipcz.datapipe.offset", "Ring Buffer Offset", base.HEX)
+local ring_buffer_size = ProtoField.uint32("ipcz.datapipe.size", "Ring Buffer Size", base.HEX)
+
+-- SharedBuffer's BufferHeader
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/shared_buffer.cc;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=29
+local shared_buffer_header_size = ProtoField.uint32("ipcz.sharedbuffer.headersize", "Header Size", base.DEC)
+local shared_buffer_buffer_size = ProtoField.uint32("ipcz.sharedbuffer.buffersize", "Buffer Size", base.DEC)
+local shared_buffer_buffer_mode = ProtoField.uint32("ipcz.sharedbuffer.mode", "Mode", base.DEC)
+local shared_buffer_padding = ProtoField.new("Padding", "ipcz.sharedbuffer.padding", ftypes.BYTES) -- 4 bytes
+local shared_buffer_guid = ProtoField.new("Identifying GUID", "ipcz.sharedbuffer.guid", ftypes.GUID) -- 8 bytes
+
 
 ipcz_protocol.fields = {
   header_size, num_handles, total_size,   -- IpczHeader
@@ -103,6 +134,10 @@ ipcz_protocol.fields = {
   first_object_index,  num_index,                                                                               -- DriverObjectArrayData
   driver_data_array, first_driver_handle, num_driver_handles,                                                  -- DriverObjectData
   closed_peer_sequence_length, new_sublink, new_link_state_fragment, new_decaying_sublink, next_outgoing_seqnum, num_bytes_produced, next_incoming_sequence_number, decaying_incoming_sequence_length, num_bytes_consumed, router_flags, flag_peer_closed, flag_proxy_already_bypassed, router_reserved, proxy_peer_node_name, proxy_peer_sublink, -- Router Descriptor
+  driver_header_size, driver_type, driver_num_handles, driver_handle_owner, driver_padding,  driver_object_body,  -- Driver ObjectHeader
+  data_pipe_header_size, data_pipe_endpoint_type, data_pipe_element_size, data_pipe_padding, data_pipe_ring_buffer_state,    -- DataPipeHeader
+  ring_buffer_offset, ring_buffer_size,                                                                             -- RingBuffer::SerializedState
+  shared_buffer_header_size, shared_buffer_buffer_size, shared_buffer_buffer_mode, shared_buffer_padding, shared_buffer_guid,    -- SharedBuffer's BufferHeader
   raw_data,                                                                                                      -- Extra Fields
 }
 
@@ -401,8 +436,8 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         local driverObjectsArrayHeaderTree = driverObjectsTree:add(buffer(offset2, 8), "Array Header")
         offset2 = read_array_header(driverObjectsArrayHeaderTree, offset2, buffer)
 
-        local driverObjectsTree = driverObjectsTree:add(buffer(offset2, array_length-8), "Array Contents")
         -- read the driver objects array contents
+        local driverObjectsTree = driverObjectsTree:add(buffer(offset2, array_length-8), "Array Contents")
         local driver_descriptor_size = 8
         local driver_index = 0
         while (driver_index < num_drivers) do
@@ -418,7 +453,10 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
             local driverDataArrayTree = paramsTree:add(buffer(offset2, array_length), "Driver #" .. (index) .. " Data Array (pointer: " .. driver_data_array_offset .. ")")
             local driverDataArrayHeaderTree = driverDataArrayTree:add(buffer(offset2, 8), "Array Header")
             offset2 = read_array_header(driverDataArrayHeaderTree, offset2, buffer)
-            driverDataArrayTree:add(buffer(offset2, num_bytes), "Array Contents (driver-specific serialization)")
+
+            -- we assume this is the Mojo IpzDriver
+            local driverArrayContetnsTree = driverDataArrayTree:add(buffer(offset2, num_bytes), "Array Contents (driver-specific serialization)")
+            offset2, drivers_num_handles = read_mojo_driver_object_data(driverArrayContetnsTree, offset2, buffer, num_bytes) 
         end
 
     end
@@ -433,43 +471,20 @@ function read_DriverObjectArrayData( subtree, offset, buffer )
 end
 
 function read_fragment_descriptor(subtree, offset, buffer)
-    subtree:add_le(fragment_buffer_id,  buffer(offset,8));             offset = offset + 8
-    subtree:add_le(fragment_offset,  buffer(offset,4));             offset = offset + 4
+    subtree:add_le(fragment_buffer_id,  buffer(offset,8));        offset = offset + 8
+    subtree:add_le(fragment_offset,  buffer(offset,4));           offset = offset + 4
     subtree:add_le(fragment_size,  buffer(offset,4));             offset = offset + 4
 
     return offset
 end
 
 function read_array_header( subtree, offset, buffer )
-	subtree:add_le(array_size, buffer(offset, 4));        offset = offset + 4
-    subtree:add_le(array_numelements, buffer(offset, 4));                 offset = offset + 4
+	subtree:add_le(array_size, buffer(offset, 4));                   offset = offset + 4
+    subtree:add_le(array_numelements, buffer(offset, 4));           offset = offset + 4
 
     return offset
 end
 
-function read_router_descriptor(subtree, offset, buffer)
-    subtree:add_le(closed_peer_sequence_length, buffer(offset, 8));        offset = offset + 8
-    subtree:add_le(new_sublink, buffer(offset, 8));                 offset = offset + 8
-    local newFragmentTree = subtree:add(new_link_state_fragment, buffer(offset, 16));
-    offset = read_fragment_descriptor(newFragmentTree, offset, buffer)
-    subtree:add_le(new_decaying_sublink, buffer(offset, 8));                 offset = offset + 8
-    subtree:add_le(next_outgoing_seqnum, buffer(offset, 8));                 offset = offset + 8
-    subtree:add_le(num_bytes_produced, buffer(offset, 8));                 offset = offset + 8
-    subtree:add_le(next_incoming_sequence_number, buffer(offset, 8));                 offset = offset + 8
-    subtree:add_le(decaying_incoming_sequence_length, buffer(offset, 8));                 offset = offset + 8
-    subtree:add_le(num_bytes_consumed, buffer(offset, 8));                 offset = offset + 8
-
-    local flagsTree = subtree:add(router_flags, buffer(offset, 1));            
-    flagsTree:add_le(flag_peer_closed, buffer(offset, 1))
-    flagsTree:add_le(flag_proxy_already_bypassed, buffer(offset, 1))
-    offset = offset + 1
-
-    subtree:add(router_reserved, buffer(offset, 7));       offset = offset + 7
-    subtree:add(proxy_peer_node_name, buffer(offset, 16));                 offset = offset + 16
-    subtree:add_le(proxy_peer_sublink, buffer(offset, 8));                 offset = offset + 8
-
-    return offset
-end
 
 function read_driver_object(subtree, offset, buffer)
     subtree:add_le(driver_data_array, buffer(offset, 4));  local data_offset = buffer(offset, 4):le_uint();             offset = offset + 4
@@ -478,6 +493,142 @@ function read_driver_object(subtree, offset, buffer)
 
     return offset, data_offset
 end
+
+
+function read_mojo_driver_object_data(subtree, offset, buffer, object_length)
+    --
+    -- Transport::DeserializeObject
+    -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/transport.cc;l=466;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
+    --
+    local header_length = buffer(offset,4):le_uint()
+
+    local headerTree = subtree:add(buffer(offset, header_length), "Driver Object Header")
+
+                            headerTree:add_le(driver_header_size, buffer(offset, 4));                                                                           offset = offset + 4
+    local driverTypeTree =  headerTree:add_le(driver_type, buffer(offset, 4));                  local driver_type_value = buffer(offset, 4):le_uint();          offset = offset + 4
+                            headerTree:add_le(driver_num_handles, buffer(offset, 4));          local num_handles_value = buffer(offset, 4):le_uint();           offset = offset + 4
+    local driverHandleOwnerTree = headerTree:add_le(driver_handle_owner, buffer(offset, 1));   local driver_handle_owner_value = buffer(offset, 1):le_uint();   offset = offset + 1
+                            headerTree:add(padding, buffer(offset, 3));                                                                                         offset = offset + 3
+
+    driverTypeTree:append_text(" [" .. get_driver_object_type(driver_type_value) .. "]")
+    driverHandleOwnerTree:append_text(" [" .. get_driver_object_handle_owner(driver_handle_owner_value) .. "]")
+
+    -- read handles list
+    local handle_size = 8
+    local handle_index = 0
+    while (handle_index < num_handles_value) do
+        local handle_value = buffer(offset, handle_size):le_uint64()
+        subtree:add(buffer(offset, handle_size), "Handle #" .. (handle_index+1) .. " Value: " .. handle_value);     offset = offset + handle_size
+        handle_index = handle_index + 1
+    end
+    local handles_area_size = handle_size * num_handles_value
+
+    local driverObjectBodyTree = subtree:add(buffer(offset, object_length - header_length - handles_area_size), "Driver Object Body (" .. get_driver_object_type(driver_type_value) .. ")")
+    
+    -- Now read the driver object data according to its Type
+    if driver_type_value == 0 then
+        -- kTransport
+    elseif driver_type_value == 1 then
+        -- kSharedBuffer
+        offset = read_shared_buffer(driverObjectBodyTree, offset, buffer)
+    elseif driver_type_value == 3 then
+        -- kTransmissiblePlatformHandle
+    elseif driver_type_value == 4 then
+        -- kWrappedPlatformHandle
+    elseif driver_type_value == 5 then
+        -- DataPipe
+        offset = read_datapipe(driverObjectBodyTree, offset, buffer)
+    end
+
+    return offset, num_handles_value
+end
+
+function read_datapipe(subtree, offset, buffer)
+    local header_length = buffer(offset,4):le_uint()
+
+    local headerTree = subtree:add(buffer(offset, header_length), "Data Pipe Header")
+
+    headerTree:add_le(data_pipe_header_size, buffer(offset, 4));                                            offset = offset + 4
+    local endpointTypeTree = headerTree:add_le(data_pipe_endpoint_type, buffer(offset, 4)); 
+    local endpoint_type_value = buffer(offset, 4):le_uint();                                            offset = offset + 4
+    headerTree:add_le(data_pipe_element_size, buffer(offset, 4));                                       offset = offset + 4
+    headerTree:add(data_pipe_padding, buffer(offset, 4));                                            offset = offset + 4
+    local ringBufferTree = headerTree:add(data_pipe_ring_buffer_state, buffer(offset, 8));                                            
+    ringBufferTree:add_le(ring_buffer_offset, buffer(offset, 4));                                          offset = offset + 4
+    ringBufferTree:add_le(ring_buffer_size, buffer(offset, 4));                                            offset = offset + 4
+
+    endpointTypeTree:append_text(" [" .. get_datapipe_endpoint_type(endpoint_type_value) .. "]")
+
+    offset = read_shared_buffer(subtree, offset, buffer)
+
+    return offset
+
+end
+
+function read_shared_buffer(subtree, offset, buffer)
+    local shared_buffer_header_length = buffer(offset,4):le_uint()
+    local sharedBufferTree = subtree:add(buffer(offset, shared_buffer_header_length), "Shared Buffer Header")
+    sharedBufferTree:add_le(shared_buffer_header_size, buffer(offset, 4));                                            offset = offset + 4
+    sharedBufferTree:add_le(shared_buffer_buffer_size, buffer(offset, 4));                                            offset = offset + 4
+    local sharedBufferModeTree = sharedBufferTree:add_le(shared_buffer_buffer_mode, buffer(offset, 4)); 
+    local shared_buffer_mode_value = buffer(offset, 4):le_uint();                                            offset = offset + 4
+    sharedBufferTree:add(shared_buffer_padding, buffer(offset, 4));                                            offset = offset + 4
+    sharedBufferTree:add_le(shared_buffer_guid, buffer(offset, 16));                                            offset = offset + 16
+
+    sharedBufferModeTree:append_text(" [" .. get_sharedbuffer_mode(shared_buffer_mode_value) .. "]")
+
+    return offset
+end
+
+function get_datapipe_endpoint_type(type_id)
+    --
+    -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/data_pipe.h;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=41
+    --
+    local handle_type = "Unknown"
+
+    if type_id == 0 then handle_type = "kProducer" end
+    if type_id == 1 then handle_type = "kConsumer" end
+
+    return handle_type
+end
+
+function get_sharedbuffer_mode(type_id)
+    --
+    -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/shared_buffer.cc;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=22
+    --
+    local handle_type = "Unknown"
+
+    if type_id == 0 then handle_type = "kReadOnly" end
+    if type_id == 1 then handle_type = "kWritable" end
+    if type_id == 2 then handle_type = "kUnsafe" end
+
+    return handle_type
+end
+
+function read_router_descriptor(subtree, offset, buffer)
+    subtree:add_le(closed_peer_sequence_length, buffer(offset, 8));         offset = offset + 8
+    subtree:add_le(new_sublink, buffer(offset, 8));                         offset = offset + 8
+    local newFragmentTree = subtree:add(new_link_state_fragment, buffer(offset, 16));
+    offset = read_fragment_descriptor(newFragmentTree, offset, buffer)
+    subtree:add_le(new_decaying_sublink, buffer(offset, 8));                 offset = offset + 8
+    subtree:add_le(next_outgoing_seqnum, buffer(offset, 8));                 offset = offset + 8
+    subtree:add_le(num_bytes_produced, buffer(offset, 8));                   offset = offset + 8
+    subtree:add_le(next_incoming_sequence_number, buffer(offset, 8));        offset = offset + 8
+    subtree:add_le(decaying_incoming_sequence_length, buffer(offset, 8));    offset = offset + 8
+    subtree:add_le(num_bytes_consumed, buffer(offset, 8));                   offset = offset + 8
+
+    local flagsTree = subtree:add(router_flags, buffer(offset, 1));            
+    flagsTree:add_le(flag_peer_closed, buffer(offset, 1))
+    flagsTree:add_le(flag_proxy_already_bypassed, buffer(offset, 1))
+    offset = offset + 1
+
+    subtree:add(router_reserved, buffer(offset, 7));                        offset = offset + 7
+    subtree:add(proxy_peer_node_name, buffer(offset, 16));                 offset = offset + 16
+    subtree:add_le(proxy_peer_sublink, buffer(offset, 8));                 offset = offset + 8
+
+    return offset
+end
+
 
 function read_ipcz_message_header(subtree, offset, buffer, message_size)
     local messageHeaderSubtree = subtree:add(buffer(offset, message_size), "Message Header")
@@ -509,6 +660,38 @@ function get_handle_type(type_id)
     if type_id == 3 then handle_type = "kBoxedSubparcel" end
 
     return handle_type
+end
+
+function get_driver_object_type(type_id)
+    --
+    -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/object.h;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1;l=31
+    --
+    local handle_type = "Unknown"
+
+    if type_id == 0 then handle_type = "kTransport" end
+    if type_id == 1 then handle_type = "kSharedBuffer" end
+    if type_id == 2 then handle_type = "kSharedBufferMapping" end
+    if type_id == 3 then handle_type = "kTransmissiblePlatformHandle" end
+    if type_id == 4 then handle_type = "kWrappedPlatformHandle" end
+    if type_id == 5 then handle_type = "kDataPipe" end
+    if type_id == 6 then handle_type = "kMojoTrap" end
+    if type_id == 7 then handle_type = "kInvitation" end
+
+
+    return handle_type
+end
+
+function get_driver_object_handle_owner(owner_id)
+    --
+    -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:mojo/core/ipcz_driver/transport.cc;l=58;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
+    --
+    local owner_type = "Unknown"
+
+    if owner_id == 0 then owner_type = "kSender" end
+    if owner_id == 1 then owner_type = "kRecipient" end
+
+
+    return owner_type
 end
 
 
