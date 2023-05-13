@@ -58,7 +58,14 @@ local ai_transport_driver_index = ProtoField.uint32 ("ipcz.ai.transportindex"   
 local ai_memory_driver_index = ProtoField.uint32 ("ipcz.ai.memoryindex"       , "Memory Driver Index"         , base.DEC)
 
 
--- Accept Parcel fields
+-- AddBlockBuffer
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=285;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
+local abb_buffer_id = ProtoField.uint64 ("ipcz.abb.bufferid"       , "Buffer ID"         , base.HEX)
+local abb_block_size = ProtoField.uint32 ("ipcz.abb.blocksize"       , "Block Size"         , base.HEX)
+local abb_buffer_driver_index = ProtoField.uint32 ("ipcz.abb.bufferindex"       , "Buffer Driver Index"         , base.DEC)
+
+
+-- AcceptParcel
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=298;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0;bpv=1;bpt=1
 local sublink_id = ProtoField.uint64 ("ipcz.ap.sublinkid"       , "Sublink ID"         , base.HEX)
 local ap_seqnum = ProtoField.uint64 ("ipcz.ap.seqnum"       , "Sequence Number"         , base.HEX)
@@ -175,6 +182,7 @@ ipcz_protocol.fields = {
   sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
   fr_sublink_id,                                                                                              -- FlushRouter
+  abb_buffer_id, abb_block_size, abb_buffer_driver_index,                                                       -- AddBlockBuffer
   ai_node_name, ai_link_side, ai_node_type, ai_padding, ai_remote_protocol_version, ai_transport_driver_index, ai_memory_driver_index, -- AcceptIntroduction
   rm_destination, rm_data, rm_padding,rm_driver_object_array,                                                   -- RelayMessage
   arm_node, arm_data, arm_padding, arm_driver_object_array,                                                     -- AcceptRelayedMessage
@@ -262,7 +270,8 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     eventDataSubstree:add_le(struct_version, buffer(offset, 4));              offset = offset + 4
 
     local params_area_size = _msg_hdr_size()() - 8
-    local paramsTree = eventDataSubstree:add(buffer(offset, params_area_size), "Serialized Parameters")
+    local params_area_offset = offset
+    local paramsTree = eventDataSubstree:add(buffer(params_area_offset, params_area_size), "Serialized Parameters")
     local arraysAreaText = "Serialized Parameters (Arrays Area)"
     local arraysParamsTree = nil
 
@@ -299,15 +308,15 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         -- AcceptIntroduction
         pinfo.cols.info = tostring(pinfo.cols.info) .. " AcceptIntroduction"
 
-        paramsTree:add(ai_node_name,  buffer(offset,16));                   offset = offset + 16
+        paramsTree:add(ai_node_name,  buffer(offset,16));                       offset = offset + 16
         local linkSideTree = paramsTree:add_le(ai_link_side,  buffer(offset,1)); 
-        local link_side_value = buffer(offset, 1):le_uint();                offset = offset + 1
+        local link_side_value = buffer(offset, 1):le_uint();                    offset = offset + 1
         local nodeTypeTree = paramsTree:add_le(ai_node_type,  buffer(offset,1)); 
-        local node_type_value = buffer(offset, 1):le_uint();                offset = offset + 1
-        paramsTree:add(ai_padding,  buffer(offset,2));             offset = offset + 2
-        paramsTree:add_le(ai_remote_protocol_version,  buffer(offset,4));             offset = offset + 4
-        paramsTree:add_le(ai_transport_driver_index,  buffer(offset,4));             offset = offset + 4
-        paramsTree:add_le(ai_memory_driver_index,  buffer(offset,4));             offset = offset + 4
+        local node_type_value = buffer(offset, 1):le_uint();                    offset = offset + 1
+        paramsTree:add(ai_padding,  buffer(offset,2));                          offset = offset + 2
+        paramsTree:add_le(ai_remote_protocol_version,  buffer(offset,4));       offset = offset + 4
+        paramsTree:add_le(ai_transport_driver_index,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add_le(ai_memory_driver_index,  buffer(offset,4));           offset = offset + 4
         
         linkSideTree:append_text(" [" .. get_link_side(link_side_value) .. "]")
         nodeTypeTree:append_text(" [" .. get_transport_endpoint_type(node_type_value) .. "]")
@@ -322,7 +331,7 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         -- AddBlockBuffer
         pinfo.cols.info = tostring(pinfo.cols.info) .. " AddBlockBuffer"
 
-        -- TODO
+        offset = read_add_block_buffer_message(paramsTree, offset, buffer)
     elseif _msg_id()() == 20 then
         --
         -- AcceptParcel
@@ -501,8 +510,9 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         end
     end
 
-    if arraysParamsTree == nil and offset + params_area_size <  _total_size()() then
-        arraysParamsTree = eventDataSubstree:add(buffer(offset + params_area_size), arraysAreaText)
+    local arrays_area_start = params_area_offset + params_area_size
+    if arraysParamsTree == nil and arrays_area_start <  _total_size()() then
+        arraysParamsTree = eventDataSubstree:add(buffer(arrays_area_start), arraysAreaText)
     end
 
     --
@@ -575,6 +585,14 @@ function read_accept_parcel_driver_object_message(subtree, offset, buffer)
     return offset
 end
 
+function read_add_block_buffer_message(subtree, offset, buffer)
+    subtree:add_le(abb_buffer_id,  buffer(offset,8));             offset = offset + 8
+    subtree:add_le(abb_block_size,  buffer(offset,4));            offset = offset + 4
+    subtree:add_le(abb_buffer_driver_index,  buffer(offset,4));   offset = offset + 4
+
+    return offset
+end
+
 function read_relayed_message_inner_message(subtree, offset, buffer, pointer_value)
     array_length = buffer(offset,4):le_uint()
     data_length = buffer(offset+4,4):le_uint()
@@ -601,7 +619,7 @@ function read_relayed_message_inner_message(subtree, offset, buffer, pointer_val
     if message_name == "AcceptParcelDriverObjects" then
         offset = read_accept_parcel_driver_object_message(messageDataTree, offset, buffer)
     elseif message_name == "AddBlockBuffer" then
-        -- TODO
+        offset = read_add_block_buffer_message(messageDataTree, offset, buffer)
     end
 
     return offset, message_name
@@ -719,7 +737,6 @@ function read_datapipe(subtree, offset, buffer)
 end
 
 function read_transport(subtree, offset, buffer, object_length)
-
     local headerTree = subtree:add(buffer(offset, object_length), "Transport Header")
 
     local transportTypeTree = headerTree:add_le(transport_destination_type, buffer(offset, 4)); 
