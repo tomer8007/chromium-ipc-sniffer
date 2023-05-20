@@ -46,6 +46,16 @@ local driver_data_array = ProtoField.uint32 ("ipcz.driver.dataarray"       , "Dr
 local first_driver_handle = ProtoField.uint16 ("ipcz.driver.driverhandle"       , "First Driver Handle"         , base.DEC)
 local num_driver_handles = ProtoField.uint16 ("ipcz.driver.numhandles"       , "Driver Handles Count"         , base.DEC)
 
+-- ReferNonBroker
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=75;bpv=0;bpt=0
+local rnb_referral_id = ProtoField.uint64 ("ipcz.rnb.referralid"       , "Referral ID"         , base.HEX)
+local rnb_num_initial_portals = ProtoField.uint32 ("ipcz.rnb.numinitialportals"       , "Initial Portals Count"         , base.DEC)
+local rnb_transport = ProtoField.uint32 ("ipcz.rnb.transport"       , "Transport (driver object index)"         , base.DEC)
+
+-- ConnectToReferredBroker
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=101;bpv=0;bpt=0
+local crb_version = ProtoField.uint32 ("ipcz.crb.protocolversion"       , "Protocol Version"         , base.DEC)
+local crb_num_initial_portals = ProtoField.uint32 ("ipcz.crb.numinitialportals"       , "Initial Portals Count"         , base.DEC)
 
 
 -- ConnectToReferredNonBroker
@@ -60,6 +70,19 @@ local crnb_broker_link_buffer_driver = ProtoField.uint32 ("ipcz.crnb.brokerlinkb
 local crnb_referrer_link_transport_driver = ProtoField.uint32 ("ipcz.crnb.referrerlinktransport"       , "Referrer Link Transport (driver index)"         , base.DEC)
 local crnb_referrer_link_buffer_driver = ProtoField.uint32 ("ipcz.crnb.referrerlinkbuffer"       , "Referrer Link Buffer (driver index)"         , base.DEC)
 
+-- NonBrokerReferralAccepted
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=157;bpv=0;bpt=0
+local nbra_referral_id = ProtoField.uint64 ("ipcz.nbra.referralid"       , "Referrer ID"         , base.HEX)
+local nbra_protocol_version = ProtoField.uint32 ("ipcz.nbra.protocolversion"       , "Protocol Version"         , base.DEC)
+local nbra_num_initial_portals = ProtoField.uint32 ("ipcz.nbra.numinitialportals"       , "Initial Portals Count"         , base.DEC)
+local nbra_node_name = ProtoField.new("Referred Node Name", "ipcz.nbra.nodename", ftypes.BYTES) -- 16 bytes
+local nbra_transport_driver = ProtoField.uint32 ("ipcz.nbra.transport"       , "Transport (driver index)"         , base.DEC)
+local nbra_buffer_driver = ProtoField.uint32 ("ipcz.nbra.buffer"       , "Buffer (driver index)"         , base.DEC)
+
+-- NonBrokerReferralRejected
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=183;bpv=0;bpt=0
+local nbrr_referral_id = ProtoField.uint64 ("ipcz.nbrr.referralid"       , "Referrer ID"         , base.HEX)
+
 
 -- AcceptIntroduction
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=232;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
@@ -71,13 +94,11 @@ local ai_remote_protocol_version = ProtoField.uint32 ("ipcz.ai.protocolversion" 
 local ai_transport_driver_index = ProtoField.uint32 ("ipcz.ai.transportindex"       , "Transport Driver Index"         , base.DEC)
 local ai_memory_driver_index = ProtoField.uint32 ("ipcz.ai.memoryindex"       , "Memory Driver Index"         , base.DEC)
 
-
 -- AddBlockBuffer
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=285;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
 local abb_buffer_id = ProtoField.uint64 ("ipcz.abb.bufferid"       , "Buffer ID"         , base.HEX)
 local abb_block_size = ProtoField.uint32 ("ipcz.abb.blocksize"       , "Block Size"         , base.HEX)
 local abb_buffer_driver_index = ProtoField.uint32 ("ipcz.abb.bufferindex"       , "Buffer Driver Index"         , base.DEC)
-
 
 -- AcceptParcel
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=298;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0;bpv=1;bpt=1
@@ -193,6 +214,10 @@ local wrapped_handle_type = ProtoField.uint32("ipcz.wrappedhandle.type", "Wrappe
 ipcz_protocol.fields = {
   header_size, num_handles, total_size,   -- IpczHeader
   message_header_size, version, message_id, reserved, sequence_number, driver_object_data_array, reserved2,     -- Message Header
+  rnb_referral_id, rnb_num_initial_portals, rnb_transport,                                                      -- ReferNonBroker
+  crb_version, crb_num_initial_portals,                                                                         -- ConnectToReferredBroker
+  nbra_referral_id, nbra_protocol_version, nbra_num_initial_portals, nbra_node_name, nbra_transport_driver, nbra_buffer_driver, -- NonBrokerReferralAccepted
+  nbrr_referral_id,                                                                                             -- NonBrokerReferralRejected
   crnb_node_name, crnb_broker_name, crnb_referrer_name, crnb_broker_protocol_version, crnb_referrer_protocol_version, crnb_num_initial_portals, crnb_broker_link_buffer_driver, crnb_referrer_link_transport_driver, crnb_referrer_link_buffer_driver, -- ConnectToReferredNonBroker
   sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
@@ -301,9 +326,16 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 2 then
         -- ReferNonBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ReferNonBroker"
+
+        paramsTree:add_le(rnb_referral_id,  buffer(offset,8));          offset = offset + 8
+        paramsTree:add_le(rnb_num_initial_portals,  buffer(offset,4));  offset = offset + 4
+        paramsTree:add_le(rnb_transport,  buffer(offset,4));            offset = offset + 4
     elseif _msg_id()() == 3 then
         -- ConnectToReferredBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectToReferredBroker"
+
+        paramsTree:add_le(crb_version,  buffer(offset,4));            offset = offset + 4
+        paramsTree:add_le(crb_num_initial_portals,  buffer(offset,4));            offset = offset + 4
     elseif _msg_id()() == 4 then
         -- ConnectToReferredNonBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectToReferredNonBroker"
@@ -322,9 +354,18 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 5 then
         -- NonBrokerReferralAccepted
         pinfo.cols.info = tostring(pinfo.cols.info) .. " NonBrokerReferralAccepted"
+
+        paramsTree:add_le(nbra_referral_id,  buffer(offset,8));          offset = offset + 8
+        paramsTree:add_le(nbra_protocol_version,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add_le(nbra_num_initial_portals,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add(nbra_node_name,  buffer(offset,16));                      offset = offset + 16
+        paramsTree:add_le(nbra_transport_driver,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add_le(nbra_buffer_driver,  buffer(offset,4));        offset = offset + 4
     elseif _msg_id()() == 6 then
         -- NonBrokerReferralRejected
         pinfo.cols.info = tostring(pinfo.cols.info) .. " NonBrokerReferralRejected"
+
+        paramsTree:add_le(nbrr_referral_id,  buffer(offset,8));        offset = offset + 8
     elseif _msg_id()() == 7 then
         -- ConnectFromBrokerToBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectFromBrokerToBroker"
