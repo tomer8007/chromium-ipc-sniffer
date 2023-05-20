@@ -14,7 +14,7 @@ local num_handles            = ProtoField.int32 ("ipcz.numhandles"       , "Hand
 local total_size       = ProtoField.int32 ("ipcz.totalsize"       , "Total Message Size"         , base.DEC)
 
 -- IPCZ MessageHeader
--- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/message.h;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0;l=32?q=MessageHeaderV0&ss=chromium%2Fchromium%2Fsrc
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/message.h;l=32?q=MessageHeaderV0&ss=chromium%2Fchromium%2Fsrc
 local message_header_size    = ProtoField.uint8 ("ipcz.msgheadersize"  , "Header Size"     , base.DEC)
 local version            = ProtoField.uint8 ("ipcz.version"       , "Header Version"         , base.DEC)
 local message_id       = ProtoField.uint8 ("ipcz.messageid"       , "Message ID"         , base.DEC)
@@ -26,17 +26,17 @@ local reserved2 = ProtoField.new ("Reserved 2" , "ipcz.reserved2"               
 local raw_data              = ProtoField.new("Raw Data", "ipcz.data", ftypes.BYTES)
 
 -- Struct Header
--- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/message.h;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0;bpv=1;bpt=0;l=64
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/message.h;bpv=1;bpt=0;l=64
 local struct_size = ProtoField.uint32 ("ipcz.structsize"       , "Struct Length"         , base.DEC)
 local struct_version = ProtoField.uint32 ("ipcz.structversion"       , "Struct Version"         , base.DEC)
 
 -- Array Header
--- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/message.h;l=75;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0;bpv=1;bpt=0
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/message.h;l=75;bpv=1;bpt=0
 local array_size = ProtoField.uint32 ("ipcz.arraysize"       , "Array Length"         , base.DEC)
 local array_numelements = ProtoField.uint32 ("ipcz.arraynumelems"       , "Elements Count"         , base.DEC)
 
 -- DriverObjectArrayData
--- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/message.h;l=108;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0;bpv=1;bpt=1?q=kDataArray&ss=chromium%2Fchromium%2Fsrc
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/message.h;l=108;bpv=1;bpt=1?q=kDataArray&ss=chromium%2Fchromium%2Fsrc
 local first_object_index = ProtoField.uint32 ("ipcz.firstobjindex"       , "First Object Index"         , base.DEC)
 local num_index = ProtoField.uint32 ("ipcz.numindex"       , "Elements Count"         , base.DEC)
 
@@ -111,7 +111,7 @@ local cfbb_padding = ProtoField.new("Padding", "ipcz.cfbb.padding", ftypes.BYTES
 local ri_node_name = ProtoField.new("Node Name (to be introduced to the sender)", "ipcz.ri.nodename", ftypes.BYTES) -- 16 bytes
 
 -- AcceptIntroduction
--- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=232;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=232;bpv=1;bpt=1
 local ai_node_name = ProtoField.new("Introduced Node Name", "ipcz.ai.nodename", ftypes.BYTES) -- 16 bytes
 local ai_link_side = ProtoField.uint8 ("ipcz.ai.linkside"       , "Link Side"         , base.DEC)
 local ai_node_type = ProtoField.uint8 ("ipcz.ai.nodetype"       , "Node Type"         , base.DEC)
@@ -130,21 +130,18 @@ local rii_source_node_name = ProtoField.new("Source Node Name", "ipcz.rii.source
 local rii_target_node_name = ProtoField.new("Target Node Name", "ipcz.rii.targetnodename", ftypes.BYTES) -- 16 bytes
 
 -- AddBlockBuffer
--- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=285;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=285;bpv=1;bpt=1
 local abb_buffer_id = ProtoField.uint64 ("ipcz.abb.bufferid"       , "Buffer ID"         , base.HEX)
 local abb_block_size = ProtoField.uint32 ("ipcz.abb.blocksize"       , "Block Size"         , base.HEX)
 local abb_buffer_driver_index = ProtoField.uint32 ("ipcz.abb.bufferindex"       , "Buffer Driver Index"         , base.DEC)
 
 -- AcceptParcel
--- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=298;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0;bpv=1;bpt=1
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=298;
 local sublink_id = ProtoField.uint64 ("ipcz.ap.sublinkid"       , "Sublink ID"         , base.HEX)
 local ap_seqnum = ProtoField.uint64 ("ipcz.ap.seqnum"       , "Sequence Number"         , base.HEX)
 local ap_subpacel_index = ProtoField.uint32 ("ipcz.ap.subparcelindex"       , "Sub-Parcel Index"         , base.DEC)
 local ap_num_subparcels = ProtoField.uint32 ("ipcz.ap.numsubpacels"       , "Sub-parcels Count"         , base.DEC)
 local ap_pacel_fragment = ProtoField.new ("Shared Memory Fragment (Optional)", "ipcz.ap.parcelfragment"                , ftypes.BYTES)
-local fragment_buffer_id = ProtoField.uint64 ("ipcz.buffid"       , "Fragment Buffer ID"         , base.HEX)
-local fragment_offset = ProtoField.uint32 ("ipcz.memoffset"       , "Fragment Begin Offset (Inside Shared Buffer)"         , base.HEX)
-local fragment_size = ProtoField.uint32 ("ipcz.fragsize"       , "Fragment Size"         , base.HEX)
 local parcel_data_array = ProtoField.uint32 ("ipcz.paceldata"       , "Parcel Data Array (Pointer)"         , base.DEC)
 local handles_types_array = ProtoField.uint32 ("ipcz.handletypes"       , "Handles Types Array (Pointer)"         , base.DEC)
 local routers_descriptors_array = ProtoField.uint32 ("ipcz.routers"       , "New Routers Array (Pointer)"         , base.DEC)
@@ -152,23 +149,29 @@ local padding = ProtoField.new ("Padding", "ipcz.padding"         , ftypes.BYTES
 local driver_objects_array = ProtoField.new ("Driver Objects Range Info ", "ipcz.driverobjects"         , ftypes.BYTES)
 local handle_type = ProtoField.uint32("ipcz.handletype", "Handle Type", base.DEC)
 
+-- FragmentDescriptor
+-- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/fragment_descriptor.h;l=21
+local fragment_buffer_id = ProtoField.uint64 ("ipcz.buffid"       , "Fragment Buffer ID"         , base.HEX)
+local fragment_offset = ProtoField.uint32 ("ipcz.memoffset"       , "Fragment Begin Offset (Inside Shared Buffer)"         , base.HEX)
+local fragment_size = ProtoField.uint32 ("ipcz.fragsize"       , "Fragment Size"         , base.HEX)
+
 -- Router Descriptor
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/router_descriptor.h;l=25
-local closed_peer_sequence_length = ProtoField.uint64("ipcz.router.peerseqlen", "Closed Peer Sequence Length", base.DEC)
-local new_sublink = ProtoField.uint64("ipcz.router.newsublink", "New Sub-Link", base.DEC)
-local new_link_state_fragment = ProtoField.new("New Link State Fragment", "ipcz.router.newlinkstate", ftypes.BYTES)
-local new_decaying_sublink = ProtoField.uint64("ipcz.router.newdecaysublink", "New Decaying Sub-Link", base.DEC)
-local next_outgoing_seqnum = ProtoField.uint64("ipcz.router.nextseqnum", "Next Outgoing Sequence Number", base.DEC)
+local closed_peer_sequence_length = ProtoField.uint64("ipcz.router.peerseqlen", "Closed Peer Sequence Length", base.HEX)
+local new_sublink = ProtoField.uint64("ipcz.router.newsublink", "New Sub-Link ID", base.HEX)
+local new_link_state_fragment = ProtoField.new("New Link State Memory Fragment", "ipcz.router.newlinkstate", ftypes.BYTES)
+local new_decaying_sublink = ProtoField.uint64("ipcz.router.newdecaysublink", "New Decaying Sub-Link ID", base.HEX)
+local next_outgoing_seqnum = ProtoField.uint64("ipcz.router.nextseqnum", "Next Outgoing Sequence Number", base.HEX)
 local num_bytes_produced = ProtoField.uint64("ipcz.router.bytesproduced", "Total Outgoing Bytes Produced", base.DEC)
 local next_incoming_sequence_number = ProtoField.uint64("ipcz.router.nextinseqnum", "Next Incoming Sequence Number", base.HEX)
-local decaying_incoming_sequence_length = ProtoField.uint64("ipcz.router.decayinseqnum", "Decaying Incoming Sequence Length", base.DEC)
+local decaying_incoming_sequence_length = ProtoField.uint64("ipcz.router.decayinseqnum", "Decaying Incoming Sequence Length", base.HEX)
 local num_bytes_consumed = ProtoField.uint64("ipcz.router.bytesconsumed", "Total Incoming Bytes Consumed", base.DEC)
 local router_flags             = ProtoField.uint32 ("ipcz.router.flags"          , "Flags"         , base.HEX)
 local flag_peer_closed = ProtoField.bool("ipcz.router.peerclosed", "peer_closed", 8, {"Other end of the route is closed", "Other end of the route is not known to be closed"}, 0x1)
 local flag_proxy_already_bypassed = ProtoField.bool("ipcz.router.proxybypass", "proxy_already_bypassed", 8, {"Proxy was already bypassed", "Proxy was not bypassed"}, 0x2)
 local router_reserved = ProtoField.new("Reserved", "ipcz.router.reserved", ftypes.BYTES) -- 7 bytes
 local proxy_peer_node_name = ProtoField.new("Proxy Peer Node Name", "ipcz.router.proxypeernodename", ftypes.BYTES)
-local proxy_peer_sublink = ProtoField.uint64("ipcz.router.proxypeersublink", "Proxy Peer Sublink", base.DEC)
+local proxy_peer_sublink = ProtoField.uint64("ipcz.router.proxypeersublink", "Proxy Peer Sublink", base.HEX)
 
 -- RouteClosed
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=371;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0
@@ -310,7 +313,8 @@ ipcz_protocol.fields = {
   nbrr_referral_id,                                                                                             -- NonBrokerReferralRejected
   cfbb_node_name, cfbb_protocol_version, cfbb_num_initial_portals, cfbb_buffer_driver, cfbb_padding,            -- ConnectFromBrokerToBroker
   crnb_node_name, crnb_broker_name, crnb_referrer_name, crnb_broker_protocol_version, crnb_referrer_protocol_version, crnb_num_initial_portals, crnb_broker_link_buffer_driver, crnb_referrer_link_transport_driver, crnb_referrer_link_buffer_driver, -- ConnectToReferredNonBroker
-  sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
+  sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
+  fragment_buffer_id, fragment_offset, fragment_size,                                                         -- Fragment Descriptor
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
   rd_sublink_id,                                                                                              -- RouteDisconnected
   bp_sublink_id, bp_reserved0, bp_node_name, bp_bypass_target_sublink,                                        -- BypassPeer
@@ -1065,8 +1069,15 @@ end
 function read_router_descriptor(subtree, offset, buffer)
     subtree:add_le(closed_peer_sequence_length, buffer(offset, 8));         offset = offset + 8
     subtree:add_le(new_sublink, buffer(offset, 8));                         offset = offset + 8
-    local newFragmentTree = subtree:add(new_link_state_fragment, buffer(offset, 16));
+    
+    local newFragmentTree = subtree:add(buffer(offset, 16), "New Link State Memory Fragment");
+    local buffer_id_value = buffer(offset, 8):le_uint64();          
     offset = read_fragment_descriptor(newFragmentTree, offset, buffer)
+    local is_memory_fragment_null = buffer_id_value > 100000000 -- actually should be == 0xffffffffffffffff
+    if is_memory_fragment_null then
+        newFragmentTree:append_text(" [NULL]")
+    end
+
     subtree:add_le(new_decaying_sublink, buffer(offset, 8));                 offset = offset + 8
     subtree:add_le(next_outgoing_seqnum, buffer(offset, 8));                 offset = offset + 8
     subtree:add_le(num_bytes_produced, buffer(offset, 8));                   offset = offset + 8
@@ -1080,8 +1091,17 @@ function read_router_descriptor(subtree, offset, buffer)
     offset = offset + 1
 
     subtree:add(router_reserved, buffer(offset, 7));                        offset = offset + 7
-    subtree:add(proxy_peer_node_name, buffer(offset, 16));                 offset = offset + 16
-    subtree:add_le(proxy_peer_sublink, buffer(offset, 8));                 offset = offset + 8
+    local proxyPeerTree = subtree:add(proxy_peer_node_name, buffer(offset, 16));
+    local proxy_peer_start_value = buffer(offset, 8):le_uint64();          offset = offset + 16
+    local proxyPeerSublinkTree = subtree:add_le(proxy_peer_sublink, buffer(offset, 8));                 
+    local proxy_peer_sublink_value = buffer(offset, 8):le_uint64();         offset = offset + 8
+
+    if proxy_peer_start_value < 100  then
+        proxyPeerTree:append_text(" [NULL]")
+    end
+    if proxy_peer_sublink_value < 100 then
+        proxyPeerSublinkTree:append_text(" [NULL]")
+    end
 
     return offset
 end
