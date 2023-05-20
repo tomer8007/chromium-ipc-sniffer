@@ -83,6 +83,14 @@ local nbra_buffer_driver = ProtoField.uint32 ("ipcz.nbra.buffer"       , "Buffer
 -- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=183;bpv=0;bpt=0
 local nbrr_referral_id = ProtoField.uint64 ("ipcz.nbrr.referralid"       , "Referrer ID"         , base.HEX)
 
+-- ConnectFromBrokerToBroker
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=193;bpv=0;bpt=0
+local cfbb_node_name = ProtoField.new("Sending Node Name", "ipcz.cfbb.nodename", ftypes.BYTES) -- 16 bytes
+local cfbb_protocol_version = ProtoField.uint32 ("ipcz.cfbb.protocolversion"       , "Protocol Version"         , base.DEC)
+local cfbb_num_initial_portals = ProtoField.uint32 ("ipcz.cfbb.numinitialportals"       , "Initial Portals Count"         , base.DEC)
+local cfbb_buffer_driver = ProtoField.uint32 ("ipcz.cfbb.buffer"       , "Buffer (driver index)"         , base.DEC)
+local cfbb_padding = ProtoField.new("Padding", "ipcz.cfbb.padding", ftypes.BYTES) -- 4 bytes
+
 
 -- AcceptIntroduction
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=232;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
@@ -218,6 +226,7 @@ ipcz_protocol.fields = {
   crb_version, crb_num_initial_portals,                                                                         -- ConnectToReferredBroker
   nbra_referral_id, nbra_protocol_version, nbra_num_initial_portals, nbra_node_name, nbra_transport_driver, nbra_buffer_driver, -- NonBrokerReferralAccepted
   nbrr_referral_id,                                                                                             -- NonBrokerReferralRejected
+  cfbb_node_name, cfbb_protocol_version, cfbb_num_initial_portals, cfbb_buffer_driver, cfbb_padding,            -- ConnectFromBrokerToBroker
   crnb_node_name, crnb_broker_name, crnb_referrer_name, crnb_broker_protocol_version, crnb_referrer_protocol_version, crnb_num_initial_portals, crnb_broker_link_buffer_driver, crnb_referrer_link_transport_driver, crnb_referrer_link_buffer_driver, -- ConnectToReferredNonBroker
   sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
@@ -369,6 +378,12 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 7 then
         -- ConnectFromBrokerToBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectFromBrokerToBroker"
+
+        paramsTree:add(cfbb_node_name,  buffer(offset,16));                      offset = offset + 16
+        paramsTree:add_le(cfbb_protocol_version,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add_le(cfbb_num_initial_portals,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add_le(cfbb_buffer_driver,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add(cfbb_padding,  buffer(offset,4));                          offset = offset + 4
     elseif _msg_id()() == 10 then
         -- ConnectFromBrokerToNonBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RequestIntroduction"
@@ -406,17 +421,17 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         --
 
         paramsTree:add_le(sublink_id,  buffer(offset,8));             offset = offset + 8
-        paramsTree:add_le(ap_seqnum,  buffer(offset,8));             offset = offset + 8
-        paramsTree:add_le(ap_subpacel_index,  buffer(offset,4));             offset = offset + 4
-        paramsTree:add_le(ap_num_subparcels,  buffer(offset,4));             offset = offset + 4
+        paramsTree:add_le(ap_seqnum,  buffer(offset,8));              offset = offset + 8
+        paramsTree:add_le(ap_subpacel_index,  buffer(offset,4));      offset = offset + 4
+        paramsTree:add_le(ap_num_subparcels,  buffer(offset,4));      offset = offset + 4
 
         -- shared memory fragment
         local sharedMemoryTree = paramsTree:add(buffer(offset,16), "Shared Memory Fragment");            
         offset = read_fragment_descriptor(sharedMemoryTree, offset, buffer)
 
         parcelDataTree = paramsTree:add_le(parcel_data_array,  buffer(offset,4));             offset = offset + 4
-        handleTypesTree = paramsTree:add_le(handles_types_array,  buffer(offset,4));             offset = offset + 4
-        routersTree = paramsTree:add_le(routers_descriptors_array,  buffer(offset,4));             offset = offset + 4
+        handleTypesTree = paramsTree:add_le(handles_types_array,  buffer(offset,4));          offset = offset + 4
+        routersTree = paramsTree:add_le(routers_descriptors_array,  buffer(offset,4));        offset = offset + 4
         paramsTree:add(padding,  buffer(offset,4));             offset = offset + 4
 
         driver_objects_tree = paramsTree:add(buffer(offset,8), "Driver Objects Range Info");  
@@ -502,7 +517,8 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 22 then
         -- RouteClosed
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RouteClosed"
-        paramsTree:add_le(rc_sublink_id,  buffer(offset,8));             offset = offset + 8
+
+        paramsTree:add_le(rc_sublink_id,  buffer(offset,8));         offset = offset + 8
         paramsTree:add_le(rc_seqnum,  buffer(offset,8));             offset = offset + 8
 
     elseif _msg_id()() == 23 then
