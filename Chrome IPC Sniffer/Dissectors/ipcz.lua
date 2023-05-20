@@ -92,9 +92,14 @@ local cfbb_buffer_driver = ProtoField.uint32 ("ipcz.cfbb.buffer"       , "Buffer
 local cfbb_padding = ProtoField.new("Padding", "ipcz.cfbb.padding", ftypes.BYTES) -- 4 bytes
 
 
+-- RequestIntroduction
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=226;bpv=0;bpt=0
+local ri_node_name = ProtoField.new("Node Name (to be introduced to the sender)", "ipcz.ri.nodename", ftypes.BYTES) -- 16 bytes
+
+
 -- AcceptIntroduction
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=232;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
-local ai_node_name = ProtoField.new("Node Name", "ipcz.ai.nodename", ftypes.BYTES) -- 16 bytes
+local ai_node_name = ProtoField.new("Introduced Node Name", "ipcz.ai.nodename", ftypes.BYTES) -- 16 bytes
 local ai_link_side = ProtoField.uint8 ("ipcz.ai.linkside"       , "Link Side"         , base.DEC)
 local ai_node_type = ProtoField.uint8 ("ipcz.ai.nodetype"       , "Node Type"         , base.DEC)
 local ai_padding = ProtoField.new("Padding", "ipcz.ai.padding", ftypes.BYTES) -- 2 bytes
@@ -232,6 +237,7 @@ ipcz_protocol.fields = {
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
   fr_sublink_id,                                                                                              -- FlushRouter
   abb_buffer_id, abb_block_size, abb_buffer_driver_index,                                                       -- AddBlockBuffer
+  ri_node_name,                                                                                                 -- RequestIntroduction
   ai_node_name, ai_link_side, ai_node_type, ai_padding, ai_remote_protocol_version, ai_transport_driver_index, ai_memory_driver_index, -- AcceptIntroduction
   rm_destination, rm_data, rm_padding,rm_driver_object_array,                                                   -- RelayMessage
   arm_node, arm_data, arm_padding, arm_driver_object_array,                                                     -- AcceptRelayedMessage
@@ -379,14 +385,16 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         -- ConnectFromBrokerToBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectFromBrokerToBroker"
 
-        paramsTree:add(cfbb_node_name,  buffer(offset,16));                      offset = offset + 16
+        paramsTree:add(cfbb_node_name,  buffer(offset,16));                 offset = offset + 16
         paramsTree:add_le(cfbb_protocol_version,  buffer(offset,4));        offset = offset + 4
-        paramsTree:add_le(cfbb_num_initial_portals,  buffer(offset,4));        offset = offset + 4
-        paramsTree:add_le(cfbb_buffer_driver,  buffer(offset,4));        offset = offset + 4
-        paramsTree:add(cfbb_padding,  buffer(offset,4));                          offset = offset + 4
+        paramsTree:add_le(cfbb_num_initial_portals,  buffer(offset,4));     offset = offset + 4
+        paramsTree:add_le(cfbb_buffer_driver,  buffer(offset,4));           offset = offset + 4
+        paramsTree:add(cfbb_padding,  buffer(offset,4));                    offset = offset + 4
     elseif _msg_id()() == 10 then
         -- ConnectFromBrokerToNonBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RequestIntroduction"
+
+        paramsTree:add(ri_node_name,  buffer(offset,16));                       offset = offset + 16
     elseif _msg_id()() == 11 then
         -- AcceptIntroduction
         pinfo.cols.info = tostring(pinfo.cols.info) .. " AcceptIntroduction"
@@ -617,7 +625,7 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         local driver_descriptor_size = 8
         local driver_index = 0
         while (driver_index < num_drivers) do
-            local driverTree = driverObjectsTree:add(buffer(offset2, driver_descriptor_size), "Driver #" .. (driver_index+1))
+            local driverTree = driverObjectsTree:add(buffer(offset2, driver_descriptor_size), "Driver #" .. (driver_index))
             offset2, driver_data_offset = read_driver_object(driverTree, offset2, buffer)
             table.insert(driver_data_arrays, driver_data_offset)
             driver_index = driver_index + 1
@@ -628,7 +636,7 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
             local offset3 = message_start_offset + driver_data_array_offset
             local array_length = buffer(offset3,4):le_uint()
             local num_bytes = buffer(offset3+4,4):le_uint()
-            local driverDataArrayTree = arraysParamsTree:add(buffer(offset3, array_length), "Driver #" .. (index) .. " Data Array")
+            local driverDataArrayTree = arraysParamsTree:add(buffer(offset3, array_length), "Driver #" .. (index - 1) .. " Data Array")
             local driverDataArrayHeaderTree = driverDataArrayTree:add(buffer(offset3, 8), "Array Header")
             offset3 = read_array_header(driverDataArrayHeaderTree, offset3, buffer)
 
