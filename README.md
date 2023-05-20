@@ -7,6 +7,7 @@ It captures data sent over the [Named Pipe](https://docs.microsoft.com/en-us/win
 
 ## What can I see using this?
 * [Mojo Core](https://chromium.googlesource.com/chromium/src/+/master/mojo/core/README.md) messages (Ports, Nodes, Invitations, Handles, etc.)
+* [IPCZ](https://docs.google.com/document/d/1i49DF2af4JDspE1fTXuPrUvChQcqDChdHH6nx4xiyoY/edit?resourcekey=0-t_viq9NAbGb5kr_ni9scTA#) messages, aka Chromuim's new replacement for Mojo Core (Portals, Routers, Parcels, etc.)
 * [Mojo binded user messages](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/cpp/bindings/README.md) (actual `.mojom` IDL method calls)
 * [Legacy IPC](https://www.chromium.org/developers/design-documents/inter-process-communication)
 * [Mojo data pipe](https://chromium.googlesource.com/chromium/src/+/master/mojo/public/c/system/README.md#Data-Pipes) control messages (read/wrote X bytes)
@@ -17,7 +18,7 @@ You are welcomed to look at [some traffic examples](https://github.com/tomer8007
 However, this project won't see anything that doesn't go over pipes, which is mostly shared memory IPC:
 * Mojo data pipe contents (raw networking buffers, audio, etc.)
 * [Sandbox IPC](https://chromium.googlesource.com/chromium/src/+/master/docs/design/sandbox.md#the-target-process)
-* Possibly more things
+* Possibly more things, such as some `ipcz` method calls
 
 ## Usage
 You can download pre-compiled binaries from the [Releases](https://github.com/tomer8007/chromium-ipc-sniffer/releases) page, and run:
@@ -98,6 +99,13 @@ Go to Edit -> Prefrences -> Protocols -> MOJOUSER -> Enable structs deep dissect
 
 ## FAQ
 
+### I don't see many mojo method calls packets. Why is that?
+Starting from Chrome v112, [ipcz](https://docs.google.com/document/d/1i49DF2af4JDspE1fTXuPrUvChQcqDChdHH6nx4xiyoY/edit?resourcekey=0-t_viq9NAbGb5kr_ni9scTA) is used as the underlying transport instead of Mojo Core. Unfortunately in this mode a lot of the interesting messages are going through shared memory and not named pipes, which means this tool will not see.
+
+You can force Chrome to use Mojo Core again by running it with these arguments:
+`chrome.exe --disable-features=MojoIpcz`
+
+
 ### What is `tdevmonc.sys`?
 `tdevmonc.sys` (or [Tibbo](https://tibbo.com/) Device Monitor) is a third-party kernel-mode driver that is used to capture the Named Pipe traffic.
 The reason to include it is to avoid the need to enable test signing or to tamper with chrome processes.
@@ -109,10 +117,4 @@ You can find sources for this driver [here](https://tibbo.com/downloads/archive/
 
 Note that this driver is used by [IO ninja](https://ioninja.com/), which is not entirely freeware.
 Also note this driver does not practically support unloading once it attaches to at least one device (you need to reboot).
-
-### I don't see Mojo packets. Why is that?
-Starting from Chrome v112, [ipcz](https://docs.google.com/document/d/1i49DF2af4JDspE1fTXuPrUvChQcqDChdHH6nx4xiyoY/edit?resourcekey=0-t_viq9NAbGb5kr_ni9scTA) is used as the underlying transport instead of Mojo Core. Unfortunately in this mode a lot of the interesting messages are going through shared memory and not named pipes, which means this tool will not see.
-
-You can force Chrome to use Mojo Core again by running it with these arguments:
-`chrome.exe --disable-features=MojoIpcz`
 
