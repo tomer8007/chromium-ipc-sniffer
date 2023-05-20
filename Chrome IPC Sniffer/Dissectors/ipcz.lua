@@ -91,11 +91,9 @@ local cfbb_num_initial_portals = ProtoField.uint32 ("ipcz.cfbb.numinitialportals
 local cfbb_buffer_driver = ProtoField.uint32 ("ipcz.cfbb.buffer"       , "Buffer (driver index)"         , base.DEC)
 local cfbb_padding = ProtoField.new("Padding", "ipcz.cfbb.padding", ftypes.BYTES) -- 4 bytes
 
-
 -- RequestIntroduction
 -- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=226;bpv=0;bpt=0
 local ri_node_name = ProtoField.new("Node Name (to be introduced to the sender)", "ipcz.ri.nodename", ftypes.BYTES) -- 16 bytes
-
 
 -- AcceptIntroduction
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=232;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
@@ -106,6 +104,15 @@ local ai_padding = ProtoField.new("Padding", "ipcz.ai.padding", ftypes.BYTES) --
 local ai_remote_protocol_version = ProtoField.uint32 ("ipcz.ai.protocolversion"       , "Remote Protocol Version"         , base.DEC)
 local ai_transport_driver_index = ProtoField.uint32 ("ipcz.ai.transportindex"       , "Transport Driver Index"         , base.DEC)
 local ai_memory_driver_index = ProtoField.uint32 ("ipcz.ai.memoryindex"       , "Memory Driver Index"         , base.DEC)
+
+-- RejectIntroduction
+--- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=264;bpv=0;bpt=0
+local rji_node_name = ProtoField.new("Node Name", "ipcz.rji.nodename", ftypes.BYTES) -- 16 bytes
+
+-- RequestIndirectIntroduction
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=272;bpv=0;bpt=0
+local rii_source_node_name = ProtoField.new("Source Node Name", "ipcz.rii.sourcenodename", ftypes.BYTES) -- 16 bytes
+local rii_target_node_name = ProtoField.new("Target Node Name", "ipcz.rii.targetnodename", ftypes.BYTES) -- 16 bytes
 
 -- AddBlockBuffer
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=285;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
@@ -239,6 +246,8 @@ ipcz_protocol.fields = {
   abb_buffer_id, abb_block_size, abb_buffer_driver_index,                                                       -- AddBlockBuffer
   ri_node_name,                                                                                                 -- RequestIntroduction
   ai_node_name, ai_link_side, ai_node_type, ai_padding, ai_remote_protocol_version, ai_transport_driver_index, ai_memory_driver_index, -- AcceptIntroduction
+  rji_node_name,                                                                                                 -- RejectIntroduction
+  rii_source_node_name, rii_target_node_name,                                                                   -- RequestIndirectIntroduction
   rm_destination, rm_data, rm_padding,rm_driver_object_array,                                                   -- RelayMessage
   arm_node, arm_data, arm_padding, arm_driver_object_array,                                                     -- AcceptRelayedMessage
   apdo_sublink_id, apdo_seqnum, apdo_driver_objects_array,                                                      -- AcceptParcelDriverObjects
@@ -365,7 +374,6 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         paramsTree:add_le(crnb_referrer_link_transport_driver,  buffer(offset,4)); offset = offset + 4
         paramsTree:add_le(crnb_referrer_link_buffer_driver,  buffer(offset,4));    offset = offset + 4
 
-
     elseif _msg_id()() == 5 then
         -- NonBrokerReferralAccepted
         pinfo.cols.info = tostring(pinfo.cols.info) .. " NonBrokerReferralAccepted"
@@ -415,9 +423,14 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 12 then
         -- RejectIntroduction
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RejectIntroduction"
+
+        paramsTree:add(rji_node_name,  buffer(offset,16));                       offset = offset + 16
     elseif _msg_id()() == 13 then
         -- RequestIndirectIntroduction
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RequestIndirectIntroduction"
+
+        paramsTree:add(rii_source_node_name,  buffer(offset,16));                       offset = offset + 16
+        paramsTree:add(rii_target_node_name,  buffer(offset,16));                       offset = offset + 16
     elseif _msg_id()() == 14 then
         -- AddBlockBuffer
         pinfo.cols.info = tostring(pinfo.cols.info) .. " AddBlockBuffer"
