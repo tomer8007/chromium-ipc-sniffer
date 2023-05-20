@@ -46,6 +46,21 @@ local driver_data_array = ProtoField.uint32 ("ipcz.driver.dataarray"       , "Dr
 local first_driver_handle = ProtoField.uint16 ("ipcz.driver.driverhandle"       , "First Driver Handle"         , base.DEC)
 local num_driver_handles = ProtoField.uint16 ("ipcz.driver.numhandles"       , "Driver Handles Count"         , base.DEC)
 
+-- ConnectFromBrokerToNonBroker
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=15;bpv=0;bpt=0
+local cbnb_broker_node_name = ProtoField.new("Broker Node Name", "ipcz.cbnb.brokernodename", ftypes.BYTES) -- 16 bytes
+local cbnb_receiver_node_name = ProtoField.new("Receiver Node Name", "ipcz.cbnb.receivernodename", ftypes.BYTES) -- 16 bytes
+local cbnb_protocol_version = ProtoField.uint32 ("ipcz.cbnb.protocolversion"       , "Protocol Version"         , base.DEC)
+local cbnb_num_initial_portals = ProtoField.uint32 ("ipcz.cbnb.numinitialportals"       , "Initial Portals Count"         , base.DEC)
+local cbnb_buffer_driver = ProtoField.uint32 ("ipcz.cbnb.buffer"       , "Buffer Driver Index"         , base.DEC)
+local cbnb_padding = ProtoField.new("Padding", "ipcz.cbnb.padding", ftypes.BYTES) -- 4 bytes
+
+-- ConnectFromNonBrokerToBroker
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=47;bpv=0;bpt=0
+local cnbb_protocol_version = ProtoField.uint32 ("ipcz.cnbb.protocolversion"       , "Protocol Version"         , base.DEC)
+local cnbb_num_initial_portals = ProtoField.uint32 ("ipcz.cnbb.numinitialportals"       , "Initial Portals Count"         , base.DEC)
+
+
 -- ReferNonBroker
 -- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=75;bpv=0;bpt=0
 local rnb_referral_id = ProtoField.uint64 ("ipcz.rnb.referralid"       , "Referral ID"         , base.HEX)
@@ -234,6 +249,8 @@ local wrapped_handle_type = ProtoField.uint32("ipcz.wrappedhandle.type", "Wrappe
 ipcz_protocol.fields = {
   header_size, num_handles, total_size,   -- IpczHeader
   message_header_size, version, message_id, reserved, sequence_number, driver_object_data_array, reserved2,     -- Message Header
+  cbnb_broker_node_name, cbnb_receiver_node_name, cbnb_protocol_version, cbnb_num_initial_portals, cbnb_buffer_driver, cbnb_padding, -- ConnectFromBrokerToBroker
+  cnbb_protocol_version, cnbb_num_initial_portals,                                                              -- ConnectFromNonBrokerToBroker
   rnb_referral_id, rnb_num_initial_portals, rnb_transport,                                                      -- ReferNonBroker
   crb_version, crb_num_initial_portals,                                                                         -- ConnectToReferredBroker
   nbra_referral_id, nbra_protocol_version, nbra_num_initial_portals, nbra_node_name, nbra_transport_driver, nbra_buffer_driver, -- NonBrokerReferralAccepted
@@ -344,9 +361,19 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     if _msg_id()() == 0 then
         -- ConnectFromBrokerToNonBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectFromBrokerToNonBroker"
+
+        paramsTree:add(cbnb_broker_node_name,  buffer(offset,16));                      offset = offset + 16
+        paramsTree:add(cbnb_receiver_node_name,  buffer(offset,16));                    offset = offset + 16
+        paramsTree:add_le(cbnb_protocol_version,  buffer(offset,4));                    offset = offset + 4
+        paramsTree:add_le(cbnb_num_initial_portals,  buffer(offset,4));                 offset = offset + 4
+        paramsTree:add_le(cbnb_buffer_driver,  buffer(offset,4));                 offset = offset + 4
+        paramsTree:add(cbnb_padding,  buffer(offset,4));                                offset = offset + 4
     elseif _msg_id()() == 1 then
         -- ConnectFromNonBrokerToBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectFromNonBrokerToBroker"
+
+        paramsTree:add_le(cnbb_protocol_version,  buffer(offset,4));                    offset = offset + 4
+        paramsTree:add_le(cnbb_num_initial_portals,  buffer(offset,4));                 offset = offset + 4
     elseif _msg_id()() == 2 then
         -- ReferNonBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ReferNonBroker"
