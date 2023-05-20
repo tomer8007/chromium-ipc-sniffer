@@ -175,9 +175,62 @@ local proxy_peer_sublink = ProtoField.uint64("ipcz.router.proxypeersublink", "Pr
 local rc_sublink_id = ProtoField.uint64 ("ipcz.rc.sublinkid"       , "Sublink ID"         , base.HEX)
 local rc_seqnum = ProtoField.uint64 ("ipcz.rc.seqnum"       , "Sequence Number"         , base.HEX)
 
+-- RouteDisconnected
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=392;bpv=0;bpt=0
+local rd_sublink_id = ProtoField.uint64("ipcz.rd.sublinkid", "Sublink ID", base.HEX)
+
+-- BypassPeer
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=408;bpv=0;bpt=0
+local bp_sublink_id = ProtoField.uint64("ipcz.bp.sublinkid", "Sublink ID", base.HEX)
+local bp_reserved0 = ProtoField.new("Reserved 0", "ipcz.bp.reserved0", ftypes.BYTES) -- 8 bytes
+local bp_node_name = ProtoField.new("Bypass Target Node Name", "ipcz.bp.targetnode", ftypes.BYTES) -- 16 bytes
+local bp_bypass_target_sublink = ProtoField.uint64("ipcz.bp.bypasssublink", "Bypass Target Sublink ID", base.HEX)
+
+-- AcceptBypassLink
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=444;bpv=0;bpt=0
+local abl_node_name = ProtoField.new("Current Peer Node Name", "ipcz.abl.peernode", ftypes.BYTES) -- 16 bytes
+local abl_sublink_id = ProtoField.uint64("ipcz.abl.peersublink", "Current Peer Sublink ID", base.HEX)
+local abl_seqnum = ProtoField.uint64 ("ipcz.abl.seqnum"       , "Inbound Sequence Length From Bypassed Link"         , base.HEX)
+local abl_new_sublink_id = ProtoField.uint64("ipcz.abl.newsublink", "New Sublink ID", base.HEX)
+local abl_fragment = ProtoField.new ("New Link State Memory Fragment (Optional)", "ipcz.abl.fragment"                , ftypes.BYTES)
+
+-- StopProxying
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=479;bpv=0;bpt=0
+local sp_sublink_id = ProtoField.uint64("ipcz.sp.sublinkid", "Sublink ID", base.HEX)
+local sp_inbound_seqnum = ProtoField.uint64 ("ipcz.sp.inboundseqnum"       , "Inbound Sequence Length"         , base.HEX)
+local sp_outbound_seqnum = ProtoField.uint64 ("ipcz.sp.outboundseqnum"       , "Outbound Sequence Length"         , base.HEX)
+
+-- ProxyWillStop
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=505;bpv=0;bpt=0
+local pws_sublink_id = ProtoField.uint64("ipcz.pws.sublinkid", "Sublink ID", base.HEX)
+local pws_inbound_seqnum = ProtoField.uint64 ("ipcz.pws.inboundseqnum"       , "Inbound Sequence Length"         , base.HEX)
+
+-- BypassPeerWithLink
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=531;bpv=0;bpt=0
+local bpwl_sublink_id = ProtoField.uint64("ipcz.bpwl.sublinkid", "Sublink ID", base.HEX)
+local bpwl_new_sublink_id = ProtoField.uint64("ipcz.bpwl.newsublinkid", "New Sublink ID", base.HEX)
+local bpwl_fragment = ProtoField.new ("New Link State Memory Fragment (Optional)", "ipcz.bpwl.fragment"                , ftypes.BYTES)
+local bpwl_inbound_seqnum = ProtoField.uint64 ("ipcz.bpwl.inboundseqnum"       , "Inbound Sequence Length"         , base.HEX)
+
+-- StopProxyingToLocalPeer
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=561;bpv=0;bpt=0
+local splp_sublink_id = ProtoField.uint64("ipcz.splp.sublinkid", "Sublink ID", base.HEX)
+local splp_outbound_seqnum = ProtoField.uint64 ("ipcz.splp.outboundseqnum"       , "Outbound Sequence Length"         , base.HEX)
+
 -- FlushRouter
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=574;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0
 local fr_sublink_id = ProtoField.uint64("ipcz.fr.sublinkid", "Sublink ID", base.HEX)
+
+-- RequestMemory
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=583;bpv=0;bpt=0
+local rmem_size = ProtoField.uint32("ipcz.rm.size", "Memory Size", base.HEX)
+local rmem_padding = ProtoField.new ("Padding", "ipcz.rm.padding"         , ftypes.BYTES) -- 4 bytes
+
+-- ProvideMemory
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=591;bpv=0;bpt=0
+local pm_size = ProtoField.uint32("ipcz.pm.size", "Memory Size", base.HEX)
+local pm_buffer = ProtoField.uint32("ipcz.pm.buffer", "Provided Buffer Driver Index", base.DEC)
+
 
 -- RelayMessage
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=599;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0
@@ -259,7 +312,16 @@ ipcz_protocol.fields = {
   crnb_node_name, crnb_broker_name, crnb_referrer_name, crnb_broker_protocol_version, crnb_referrer_protocol_version, crnb_num_initial_portals, crnb_broker_link_buffer_driver, crnb_referrer_link_transport_driver, crnb_referrer_link_buffer_driver, -- ConnectToReferredNonBroker
   sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
+  rd_sublink_id,                                                                                              -- RouteDisconnected
+  bp_sublink_id, bp_reserved0, bp_node_name, bp_bypass_target_sublink,                                        -- BypassPeer
+  abl_node_name, abl_sublink_id, abl_seqnum, abl_new_sublink_id, abl_fragment,                                -- AcceptBypassLink
+  sp_sublink_id, sp_inbound_seqnum, sp_outbound_seqnum,                                                                      -- StopProxying
+  pws_sublink_id, pws_inbound_seqnum,                                                                         -- ProxyWillStop
+  bpwl_sublink_id, bpwl_new_sublink_id, bpwl_fragment, bpwl_inbound_seqnum,                                   -- BypassPeerWithLink
+  splp_sublink_id, splp_outbound_seqnum,                                                                      -- StopProxyingToLocalPeer
   fr_sublink_id,                                                                                              -- FlushRouter
+  rmem_size, rmem_padding,                                                                                        -- RequestMemory
+  pm_size, pm_buffer,                                                                                         -- ProvideMemory
   abb_buffer_id, abb_block_size, abb_buffer_driver_index,                                                       -- AddBlockBuffer
   ri_node_name,                                                                                                 -- RequestIntroduction
   ai_node_name, ai_link_side, ai_node_type, ai_padding, ai_remote_protocol_version, ai_transport_driver_index, ai_memory_driver_index, -- AcceptIntroduction
@@ -426,7 +488,7 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
         paramsTree:add_le(cfbb_buffer_driver,  buffer(offset,4));           offset = offset + 4
         paramsTree:add(cfbb_padding,  buffer(offset,4));                    offset = offset + 4
     elseif _msg_id()() == 10 then
-        -- ConnectFromBrokerToNonBroker
+        -- RequestIntroduction
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RequestIntroduction"
 
         paramsTree:add(ri_node_name,  buffer(offset,16));                       offset = offset + 16
@@ -572,24 +634,70 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 23 then
         -- RouteDisconnected
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RouteDisconnected"
+
+        paramsTree:add_le(rd_sublink_id,  buffer(offset,8));         offset = offset + 8
     elseif _msg_id()() == 30 then
         -- BypassPeer
         pinfo.cols.info = tostring(pinfo.cols.info) .. " BypassPeer"
+
+        paramsTree:add_le(bp_sublink_id,  buffer(offset,8));                    offset = offset + 8
+        paramsTree:add(bp_reserved0,  buffer(offset,8));                        offset = offset + 8
+        paramsTree:add(bp_node_name,  buffer(offset,16));                       offset = offset + 16
+        paramsTree:add_le(bp_bypass_target_sublink,  buffer(offset,8));         offset = offset + 8
     elseif _msg_id()() == 31 then
         -- AcceptBypassLink
         pinfo.cols.info = tostring(pinfo.cols.info) .. " AcceptBypassLink"
+
+        paramsTree:add(abl_node_name,  buffer(offset,16));                       offset = offset + 16
+        paramsTree:add_le(abl_sublink_id,  buffer(offset,8));                    offset = offset + 8
+        paramsTree:add_le(abl_seqnum,  buffer(offset,8));                        offset = offset + 8
+        paramsTree:add_le(abl_new_sublink_id,  buffer(offset,8));                offset = offset + 8
+
+        -- shared memory fragment
+        local fragmentTree = paramsTree:add(buffer(offset, 16), "New Link State Memory Fragment");   
+        local buffer_id_value = buffer(offset, 8):le_uint64();          
+        offset = read_fragment_descriptor(fragmentTree, offset, buffer)
+        local is_memory_fragment_null = buffer_id_value > 100000000 -- actually should be == 0xffffffffffffffff
+        if is_memory_fragment_null then
+            fragmentTree:append_text(" [NULL]")
+        end
+
     elseif _msg_id()() == 32 then
         -- StopProxying
         pinfo.cols.info = tostring(pinfo.cols.info) .. " StopProxying"
+
+        paramsTree:add_le(sp_sublink_id, buffer(offset, 8));                        offset = offset + 8
+        paramsTree:add_le(sp_inbound_seqnum,  buffer(offset,8));                    offset = offset + 8
+        paramsTree:add_le(sp_outbound_seqnum,  buffer(offset,8));                   offset = offset + 8
     elseif _msg_id()() == 33 then
         -- ProxyWillStop
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ProxyWillStop"
+
+        paramsTree:add_le(pws_sublink_id,  buffer(offset,8));                    offset = offset + 8
+        paramsTree:add_le(pws_inbound_seqnum,  buffer(offset,8));                offset = offset + 8
     elseif _msg_id()() == 34 then
         -- BypassPeerWithLink
         pinfo.cols.info = tostring(pinfo.cols.info) .. " BypassPeerWithLink"
+
+        paramsTree:add_le(bpwl_sublink_id,  buffer(offset,8));                    offset = offset + 8
+        paramsTree:add_le(bpwl_new_sublink_id,  buffer(offset,8));                offset = offset + 8
+
+        -- shared memory fragment
+        local fragmentTree = paramsTree:add(buffer(offset, 16), "New Link State Memory Fragment");   
+        local buffer_id_value = buffer(offset, 8):le_uint64();          
+        offset = read_fragment_descriptor(fragmentTree, offset, buffer)
+        local is_memory_fragment_null = buffer_id_value > 100000000 -- actually should be == 0xffffffffffffffff
+        if is_memory_fragment_null then
+            fragmentTree:append_text(" [NULL]")
+        end
+
+        paramsTree:add_le(bpwl_inbound_seqnum,  buffer(offset,8));                    offset = offset + 8
     elseif _msg_id()() == 35 then
         -- StopProxyingToLocalPeer
         pinfo.cols.info = tostring(pinfo.cols.info) .. " StopProxyingToLocalPeer"
+
+        paramsTree:add_le(splp_sublink_id,  buffer(offset,8));                    offset = offset + 8
+        paramsTree:add_le(splp_outbound_seqnum,  buffer(offset,8));                offset = offset + 8
     elseif _msg_id()() == 36 then
         -- FlushRouter
         pinfo.cols.info = tostring(pinfo.cols.info) .. " FlushRouter"
@@ -598,18 +706,24 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 64 then
         -- RequestMemory
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RequestMemory"
+
+        paramsTree:add_le(rmem_size,  buffer(offset,4));                    offset = offset + 4
+        paramsTree:add(rmem_padding,  buffer(offset,4));                    offset = offset + 4
     elseif _msg_id()() == 65 then
         -- ProvideMemory
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ProvideMemory"
+
+        paramsTree:add_le(pm_size,  buffer(offset,4));                    offset = offset + 4
+        paramsTree:add_le(pm_buffer,  buffer(offset,4));                  offset = offset + 4
     elseif _msg_id()() == 66 then
         --
         -- RelayMessage
         --
         pinfo.cols.info = tostring(pinfo.cols.info) .. " RelayMessage"
 
-        paramsTree:add_le(rm_destination, buffer(offset, 16));            offset = offset + 16
-        paramsTree:add_le(rm_data,  buffer(offset,4));             offset = offset + 4
-        paramsTree:add_le(rm_padding, buffer(offset, 4));            offset = offset + 4
+        paramsTree:add_le(rm_destination, buffer(offset, 16));              offset = offset + 16
+        paramsTree:add_le(rm_data,  buffer(offset,4));                      offset = offset + 4
+        paramsTree:add_le(rm_padding, buffer(offset, 4));                   offset = offset + 4
         driver_objects_tree = paramsTree:add(buffer(offset,8), "Driver Objects Range Info");  
         offset = read_DriverObjectArrayData(driver_objects_tree, offset, buffer)
 
