@@ -47,6 +47,20 @@ local first_driver_handle = ProtoField.uint16 ("ipcz.driver.driverhandle"       
 local num_driver_handles = ProtoField.uint16 ("ipcz.driver.numhandles"       , "Driver Handles Count"         , base.DEC)
 
 
+
+-- ConnectToReferredNonBroker
+-- https://source.chromium.org/chromium/chromium/src/+/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=118;bpv=1;bpt=0
+local crnb_node_name = ProtoField.new("New Node Name", "ipcz.crnb.nodename", ftypes.BYTES) -- 16 bytes
+local crnb_broker_name = ProtoField.new("Broker Name", "ipcz.crnb.brokername", ftypes.BYTES) -- 16 bytes
+local crnb_referrer_name = ProtoField.new("Referrer Name", "ipcz.crnb.referrername", ftypes.BYTES) -- 16 bytes
+local crnb_broker_protocol_version = ProtoField.uint32 ("ipcz.crnb.brokerprotocolversion"       , "Broker Protocol Version"         , base.DEC)
+local crnb_referrer_protocol_version = ProtoField.uint32 ("ipcz.crnb.referrerprotocolversion"       , "Referrer Protocol Version"         , base.DEC)
+local crnb_num_initial_portals = ProtoField.uint32 ("ipcz.crnb.numinitialportals"       , "Initial Portals Count"         , base.DEC)
+local crnb_broker_link_buffer_driver = ProtoField.uint32 ("ipcz.crnb.brokerlinkbuffer"       , "Broker Link Buffer (driver index)"         , base.DEC)
+local crnb_referrer_link_transport_driver = ProtoField.uint32 ("ipcz.crnb.referrerlinktransport"       , "Referrer Link Transport (driver index)"         , base.DEC)
+local crnb_referrer_link_buffer_driver = ProtoField.uint32 ("ipcz.crnb.referrerlinkbuffer"       , "Referrer Link Buffer (driver index)"         , base.DEC)
+
+
 -- AcceptIntroduction
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=232;drc=b18d59d36ac77ddf968b6e3452109e67471ee38f;bpv=1;bpt=1
 local ai_node_name = ProtoField.new("Node Name", "ipcz.ai.nodename", ftypes.BYTES) -- 16 bytes
@@ -179,6 +193,7 @@ local wrapped_handle_type = ProtoField.uint32("ipcz.wrappedhandle.type", "Wrappe
 ipcz_protocol.fields = {
   header_size, num_handles, total_size,   -- IpczHeader
   message_header_size, version, message_id, reserved, sequence_number, driver_object_data_array, reserved2,     -- Message Header
+  crnb_node_name, crnb_broker_name, crnb_referrer_name, crnb_broker_protocol_version, crnb_referrer_protocol_version, crnb_num_initial_portals, crnb_broker_link_buffer_driver, crnb_referrer_link_transport_driver, crnb_referrer_link_buffer_driver, -- ConnectToReferredNonBroker
   sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, fragment_buffer_id, fragment_offset, fragment_size, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
   fr_sublink_id,                                                                                              -- FlushRouter
@@ -292,6 +307,18 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     elseif _msg_id()() == 4 then
         -- ConnectToReferredNonBroker
         pinfo.cols.info = tostring(pinfo.cols.info) .. " ConnectToReferredNonBroker"
+
+        paramsTree:add(crnb_node_name,  buffer(offset,16));                        offset = offset + 16
+        paramsTree:add(crnb_broker_name,  buffer(offset,16));                      offset = offset + 16
+        paramsTree:add(crnb_referrer_name,  buffer(offset,16));                    offset = offset + 16
+        paramsTree:add_le(crnb_broker_protocol_version,  buffer(offset,4));        offset = offset + 4
+        paramsTree:add_le(crnb_referrer_protocol_version,  buffer(offset,4));      offset = offset + 4
+        paramsTree:add_le(crnb_num_initial_portals,  buffer(offset,4));            offset = offset + 4
+        paramsTree:add_le(crnb_broker_link_buffer_driver,  buffer(offset,4));      offset = offset + 4
+        paramsTree:add_le(crnb_referrer_link_transport_driver,  buffer(offset,4)); offset = offset + 4
+        paramsTree:add_le(crnb_referrer_link_buffer_driver,  buffer(offset,4));    offset = offset + 4
+
+
     elseif _msg_id()() == 5 then
         -- NonBrokerReferralAccepted
         pinfo.cols.info = tostring(pinfo.cols.info) .. " NonBrokerReferralAccepted"
@@ -506,7 +533,6 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
             local offset2 = message_start_offset + _arm_data_offset()()
 
             offset2, inner_message_name = read_relayed_message_inner_message(arraysParamsTree, offset2, buffer, _arm_data_offset()())
-
         end
     end
 

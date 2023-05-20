@@ -161,7 +161,10 @@ namespace ChromiumIPCSniffer
             // Look in Program Fies manually.
             //
 
-            string programFilesDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Google\Chrome\Application");
+            string programFilesDirX86 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Google\Chrome\Application");
+            string programFilesDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Google\Chrome\Application");
+
+            if (Directory.Exists(programFilesDirX86)) programFilesDir = programFilesDirX86;
 
             if (Directory.Exists(programFilesDir))
             {
