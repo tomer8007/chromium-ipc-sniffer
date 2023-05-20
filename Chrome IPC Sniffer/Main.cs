@@ -160,7 +160,7 @@ Available options:
                 return true;
             }
 
-            if (!File.ReadAllText(colorfiltersFile).Contains("@mojouser") || true)
+            if (!File.ReadAllText(colorfiltersFile).Contains("@ipcz"))
             {
                 Console.WriteLine("[+] Configuring Wirehsark protocol colors");
 
