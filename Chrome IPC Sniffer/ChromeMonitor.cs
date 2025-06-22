@@ -186,12 +186,25 @@ namespace ChromiumIPCSniffer
 
         public static string GetCommitForVersion(string chromeVersion)
         {
-            WebClient webClient = new WebClient();
-            webClient.Headers.Add("User-Agent", "Chrome IPC Sniffer");
+            using (var webClient = new WebClient())
+            {
+                webClient.Headers.Add("User-Agent", "Chrome IPC Sniffer");
+ 
+                string refUrl = $"https://api.github.com/repos/chromium/chromium/git/ref/tags/{chromeVersion}";
+                dynamic gitRef = JsonConvert.DeserializeObject(webClient.DownloadString(refUrl));
 
-            dynamic commits = JsonConvert.DeserializeObject(webClient.DownloadString("https://api.github.com/repos/chromium/chromium/git/refs/tags/" + chromeVersion));
-            string commit = commits["object"]["sha"];
-            return commit;
+                if ((string)gitRef.@object.type == "commit")
+                    return gitRef.@object.sha;
+
+                if ((string)gitRef.@object.type == "tag")
+                {
+                    string tagUrl = (string)gitRef.@object.url;
+                    dynamic tagObj = JsonConvert.DeserializeObject(webClient.DownloadString(tagUrl));
+                    return tagObj.@object.sha;
+                }
+
+                throw new InvalidOperationException("Unknown tag object type.");
+            }
         }
     }
 
