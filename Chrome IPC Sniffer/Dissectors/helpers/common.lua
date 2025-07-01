@@ -1,6 +1,8 @@
 local common = {}
 -- local d = require('debug')
 
+local json = reuire('json')
+
 function common.get_chrome_type_name(opcode)
   local opcode_name = "Unknown"
 
@@ -34,9 +36,10 @@ function common.script_path()
   return str:match("(.*[/\\])")
 end
 
-function common.json_to_table(json)
-  L="return ".. json:gsub('("[^"]-"):','[%1]=') 
-  return loadstring(L)()
+function common.json_to_table(json_str)
+  -- L="return ".. json:gsub('("[^"]-"):','[%1]=') 
+  -- return loadstring(L)()
+  return json.decode(json_str)
 end
 
 function common.split (inputstr, sep)

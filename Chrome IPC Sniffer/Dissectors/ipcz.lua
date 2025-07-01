@@ -12,6 +12,7 @@ local get_chrome_name = require("helpers\\common").get_chrome_type_name
 local header_size                  = ProtoField.int16 ("ipcz.headersize"             , "Header Size"     , base.DEC)
 local num_handles            = ProtoField.int32 ("ipcz.numhandles"       , "Handles Count"         , base.DEC)
 local total_size       = ProtoField.int32 ("ipcz.totalsize"       , "Total Message Size"         , base.DEC)
+local creation_timeticks = ProtoField.uint64("ipcz.creationtimticks", "Header Creation Timeticks", base.DEC)
 
 -- IPCZ MessageHeader
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/message.h;l=32?q=MessageHeaderV0&ss=chromium%2Fchromium%2Fsrc
@@ -303,7 +304,7 @@ local wrapped_handle_type = ProtoField.uint32("ipcz.wrappedhandle.type", "Wrappe
 
 
 ipcz_protocol.fields = {
-  header_size, num_handles, total_size,   -- IpczHeader
+  header_size, num_handles, total_size, creation_timeticks,   -- IpczHeader
   message_header_size, version, message_id, reserved, sequence_number, driver_object_data_array, reserved2,     -- Message Header
   cbnb_broker_node_name, cbnb_receiver_node_name, cbnb_protocol_version, cbnb_num_initial_portals, cbnb_buffer_driver, cbnb_padding, -- ConnectFromBrokerToBroker
   cnbb_protocol_version, cnbb_num_initial_portals,                                                              -- ConnectFromNonBrokerToBroker
@@ -313,18 +314,18 @@ ipcz_protocol.fields = {
   nbrr_referral_id,                                                                                             -- NonBrokerReferralRejected
   cfbb_node_name, cfbb_protocol_version, cfbb_num_initial_portals, cfbb_buffer_driver, cfbb_padding,            -- ConnectFromBrokerToBroker
   crnb_node_name, crnb_broker_name, crnb_referrer_name, crnb_broker_protocol_version, crnb_referrer_protocol_version, crnb_num_initial_portals, crnb_broker_link_buffer_driver, crnb_referrer_link_transport_driver, crnb_referrer_link_buffer_driver, -- ConnectToReferredNonBroker
-  sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- Accept Parcel fields
+  sublink_id, ap_seqnum, ap_subpacel_index, ap_num_subparcels, ap_pacel_fragment, parcel_data_array, handles_types_array, routers_descriptors_array, padding, driver_objects_array, handle_type,  -- AcceptParcel
   fragment_buffer_id, fragment_offset, fragment_size,                                                         -- Fragment Descriptor
   rc_sublink_id, rc_seqnum,                                                                                   -- RouteClosed
   rd_sublink_id,                                                                                              -- RouteDisconnected
   bp_sublink_id, bp_reserved0, bp_node_name, bp_bypass_target_sublink,                                        -- BypassPeer
   abl_node_name, abl_sublink_id, abl_seqnum, abl_new_sublink_id, abl_fragment,                                -- AcceptBypassLink
-  sp_sublink_id, sp_inbound_seqnum, sp_outbound_seqnum,                                                                      -- StopProxying
+  sp_sublink_id, sp_inbound_seqnum, sp_outbound_seqnum,                                                       -- StopProxying
   pws_sublink_id, pws_inbound_seqnum,                                                                         -- ProxyWillStop
   bpwl_sublink_id, bpwl_new_sublink_id, bpwl_fragment, bpwl_inbound_seqnum,                                   -- BypassPeerWithLink
   splp_sublink_id, splp_outbound_seqnum,                                                                      -- StopProxyingToLocalPeer
   fr_sublink_id,                                                                                              -- FlushRouter
-  rmem_size, rmem_padding,                                                                                        -- RequestMemory
+  rmem_size, rmem_padding,                                                                                    -- RequestMemory
   pm_size, pm_buffer,                                                                                         -- ProvideMemory
   abb_buffer_id, abb_block_size, abb_buffer_driver_index,                                                       -- AddBlockBuffer
   ri_node_name,                                                                                                 -- RequestIntroduction
@@ -352,6 +353,7 @@ ipcz_protocol.experts = {expert_info_pipeerror}
 local _header_size = Field.new("ipcz.headersize")
 local _num_handles = Field.new("ipcz.numhandles")
 local _total_size = Field.new("ipcz.totalsize")
+local _creation_timeticks = Field.new("ipcz.creationtimticks")
 local _driverobjectsoffset = Field.new("ipcz.driverobjectoffset")
 
 local _msg_hdr_size = Field.new("ipcz.structsize")
@@ -396,6 +398,9 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
     headerSubtree:add_le(header_size,                buffer(offset,2))            offset = offset + 2
     headerSubtree:add_le(num_handles,          buffer(offset,2));                 offset = offset + 2
     headerSubtree:add_le(total_size,            buffer(offset,4));                offset = offset + 4
+    if header_size_value > 8 then
+        headerSubtree:add_le(creation_timeticks,            buffer(offset,8));        offset = offset + 8
+    end
 
     headerSubtree:set_len(header_size_value)
 

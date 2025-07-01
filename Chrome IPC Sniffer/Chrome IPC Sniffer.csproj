@@ -79,6 +79,9 @@
     <None Include="Dissectors\audio_sync.lua">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="Dissectors\helpers\json.lua">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Dissectors\helpers\legacy_ipc_interfaces.json" />
     <None Include="Dissectors\helpers\mojo_interfaces.json" />
     <None Include="Dissectors\helpers\mojo_interfaces_map.lua" />

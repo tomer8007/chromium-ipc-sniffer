@@ -98,7 +98,7 @@ function npfs_protocol.dissector(buffer, pinfo, tree)
         if mojo_data_len > length - offset then
             pinfo.cols.info = tostring(pinfo.cols.info) .. " [truncated]"
         end
-    elseif ipcz_header_len == 8 then
+    elseif ipcz_header_len == 8 or ipcz_header_len == 16 then
         -- looks like the first version of IPCZ
         Dissector.get("ipcz"):call(buffer(offset, _data_len()()):tvb(),  pinfo, tree)
 
