@@ -1,7 +1,7 @@
 local common = {}
 -- local d = require('debug')
 
-local json = reuire('json')
+local json = require('json')
 
 function common.get_chrome_type_name(opcode)
   local opcode_name = "Unknown"
