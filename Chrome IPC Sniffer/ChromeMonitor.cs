@@ -29,7 +29,8 @@ namespace ChromiumIPCSniffer
         {
             Console.WriteLine("[+] Determining your chromium version");
             this.DLLPath = dllPath == null ? GetChromeDLLPath() : dllPath;
-            this.ChromeVersion = new DirectoryInfo(Path.GetDirectoryName(this.DLLPath)).Name;
+            
+            this.ChromeVersion = GetChromeDLLVersion(this.DLLPath);
 
             Console.WriteLine("[+] You are using chromium " + this.ChromeVersion);
             //Console.WriteLine("[+] " + this.DLLPath);
@@ -182,6 +183,26 @@ namespace ChromiumIPCSniffer
             Environment.Exit(1);
 
             return "";
+        }
+
+        public static string GetChromeDLLVersion(string chrmeDLLPath)
+        {
+            try
+            {
+                FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(chrmeDLLPath);
+                string version = versionInfo.FileVersion; // Will typically return "1xx.xxx.xxx" 
+                if (version.Contains("."))
+                {
+                    return version;
+                }
+            }
+            catch
+            {
+                // fallback to Directory path
+            }
+
+            return new DirectoryInfo(Path.GetDirectoryName(chrmeDLLPath)).Name;
+
         }
 
         public static string GetCommitForVersion(string chromeVersion)
