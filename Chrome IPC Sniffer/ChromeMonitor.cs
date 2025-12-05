@@ -8,9 +8,12 @@ using System.IO;
 using System.Management;
 using Newtonsoft.Json;
 using System.Net;
+using System.Threading;
 
 namespace ChromiumIPCSniffer
 {
+    public delegate void OnNewChromeProcessDelegate(Process newProcess);
+
     public class ChromeMonitor
     {
         // This should be updated whenever a chrome process gets created/destryoed
@@ -18,6 +21,11 @@ namespace ChromiumIPCSniffer
 
         public string DLLPath = string.Empty;
         public string ChromeVersion = string.Empty;
+
+        private Thread processMonitoringThread;
+        private bool isShuttingDown = false;
+
+        public event OnNewChromeProcessDelegate NewChromeProcessCallback;
 
         public ChromeMonitor(string dllPath = null)
         {
@@ -53,7 +61,34 @@ namespace ChromiumIPCSniffer
                 processInfo.PID = process.Id;
                 processInfo.Name = process.ProcessName;
                 processInfo.CommandLine = processInfo.Name == "chrome" ? process.GetCommandLine() : "";
+
+
+                if (!RunningProcessesCache.ContainsKey((UInt32)process.Id))
+                {
+                    // seems like a new process
+                    if (NewChromeProcessCallback != null) NewChromeProcessCallback(process);
+                }
                 RunningProcessesCache[(UInt32)process.Id] = processInfo;
+            }
+        }
+
+        public void StartMonitoring()
+        {
+            processMonitoringThread = new Thread(new ThreadStart(ProcessPollingThread)) { Priority = ThreadPriority.AboveNormal };
+            processMonitoringThread.Start();
+        }
+
+        public void StopMonitoring()
+        {
+            isShuttingDown = true;
+        }
+
+        public void ProcessPollingThread()
+        {
+            while (!isShuttingDown)
+            {
+                UpdateRunningProcessesCache();
+                Thread.Sleep(2000);
             }
         }
 
@@ -66,6 +101,20 @@ namespace ChromiumIPCSniffer
             else
             {
                 return false;
+            }
+        }
+
+        public long GetChromeModuleAddress(Process process)
+        {
+            try
+            {
+                return process.GetModuleBaseAddress("chrome.dll").ToInt64();
+            }
+            catch (System.ComponentModel.Win32Exception e)
+            {
+                // fail with "only part of a ReadProcessMemory or WriteProcessMemory request was completed"?
+                // assume the process was closed or something
+                return 0;
             }
         }
 

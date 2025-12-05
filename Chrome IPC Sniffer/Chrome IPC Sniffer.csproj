@@ -49,6 +49,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Setup\ChromePatcher.cs" />
     <Compile Include="Setup\InernalStructs.cs" />
     <Compile Include="Setup\LegacyIpcInterfacesFetcher.cs" />
     <Compile Include="Utilities\Extensions\ByteArrayExtensions.cs" />
@@ -83,8 +84,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Dissectors\helpers\legacy_ipc_interfaces.json" />
-    <None Include="Dissectors\helpers\mojo_interfaces.json" />
-    <None Include="Dissectors\helpers\mojo_interfaces_map.lua" />
+    <None Include="Dissectors\helpers\mojo_interfaces.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Dissectors\helpers\mojo_interfaces_map.lua">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Dissectors\mojo_core.lua">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

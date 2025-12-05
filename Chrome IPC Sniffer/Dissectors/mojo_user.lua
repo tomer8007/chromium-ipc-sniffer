@@ -184,7 +184,8 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
     -- https://docs.google.com/document/d/1jNcsxOdO3Al52s6lIrMOOgY7KXB7TJ8wGGWstAHiTd8
     --
 
-    -- Read the arguments struct
+    -- Read the arguments struct. 
+    -- TODO: I think that in version 3 of the mojouser this part is gone
     local structs_layout_map = {}
     parametersSubtree = dataSubtree:add(buffer(offset), "Main Arguments Struct")
     parametersSubtree:add_le(struct_num_bytes, buffer(offset, 4));                              offset = offset + 4

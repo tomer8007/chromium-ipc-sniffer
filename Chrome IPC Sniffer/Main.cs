@@ -30,12 +30,14 @@ namespace ChromiumIPCSniffer
             bool forceFetchInterfacesInfo = false;
             bool forceExtractMethodNames = false;
             bool onlyMojo = false;
+            bool dontPatch = false;
             foreach (string argument in args)
             {
                 if (argument.Contains("--update-interfaces-info")) { forceFetchInterfacesInfo = true; forceExtractMethodNames = true; }
                 else if (argument.Contains("--only-new-mojo-pipes")) onlyNewPipes = true;
                 else if (argument.Contains("--extract-method-names")) forceExtractMethodNames = true;
                 else if (argument.Contains("--only-mojo")) onlyMojo = true;
+                else if (argument.Contains("--dont-patch")) dontPatch = true;
                 else if (argument.Contains("-h") || argument.Contains("--help") || argument.Contains("/?")) { ShowUsage(); return; }
                 else
                 {
@@ -62,12 +64,22 @@ namespace ChromiumIPCSniffer
             }
 
             MethodHashesExtractor.ExtractMethodNames(chromeMonitor.DLLPath, force: forceExtractMethodNames);
+            ChromePatcher chromePatcher = new ChromePatcher(chromeMonitor);
 
             bool success = UpdateWiresharkConfiguration();
             if (!success) return;
 
             Console.WriteLine("[+] Enumerating existing chrome pipes");
             HandlesUtility.EnumerateExistingHandles(ChromeMonitor.GetRunningChromeProcesses());
+
+            //
+            // Patch if needed
+            //
+
+            if (!dontPatch)
+            {
+                chromePatcher.StartPatching();
+            }
 
             //
             // Start sniffing
@@ -82,12 +94,10 @@ namespace ChromiumIPCSniffer
 
             if (isMonitoring)
             {
-                if (Process.GetProcessesByName("Wireshark").Length == 0)
-                {
-                    Console.WriteLine("[+] Opening Wirehark");
-                    Process.Start(@"C:\Program Files\Wireshark\Wireshark.exe", "-k -i " + outputPipePath);
-                }
-
+                // TODO: don't run Wireshark when there is already an existing Wireshark chromeipc session open
+                Console.WriteLine("[+] Opening Wirehark");
+                Process.Start(@"C:\Program Files\Wireshark\Wireshark.exe", "-k -i " + outputPipePath);
+                
                 Console.WriteLine("[+] Capturing packets...");
             }
 
@@ -98,6 +108,7 @@ namespace ChromiumIPCSniffer
             {
                 Thread.CurrentThread.IsBackground = false;
                 pipeMonitor.Stop();
+                chromePatcher.Stop();
             };
 
         }
@@ -116,6 +127,10 @@ Available options:
             Records only packets sent over mojo AND newly-created pipes since the start of the capture
             This helps reducing noise and it might improve performance
             (example: opening a new tab will create a new mojo pipe).
+
+        --dont-patch
+            Avoids trying to patch the chrome processes (Chromium v112+). The patching is used to make all IPCZ traffic directed to named pipe instead of shared memory.
+            Disabling patching is useful when the patching seems to misfunction\slow down, but will make this tools miss a lot of useful IDL calls
             
     Interface resolving:
         --update-interfaces-info

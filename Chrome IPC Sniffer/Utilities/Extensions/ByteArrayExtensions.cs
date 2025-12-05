@@ -10,7 +10,7 @@ namespace ChromiumIPCSniffer
     {
         static readonly int[] Empty = new int[0];
 
-        public static int[] Locate(this byte[] self, byte[] candidate)
+        public static int[] Locate(this byte[] self, byte[] candidate, int maxResults = int.MaxValue)
         {
             if (IsEmptyLocate(self, candidate))
                 return Empty;
@@ -23,6 +23,8 @@ namespace ChromiumIPCSniffer
                     continue;
 
                 list.Add(i);
+
+                if (list.Count >= maxResults) return list.ToArray();
             }
 
             return list.Count == 0 ? Empty : list.ToArray();
