@@ -110,9 +110,10 @@ namespace ChromiumIPCSniffer
             {
                 return process.GetModuleBaseAddress("chrome.dll").ToInt64();
             }
-            catch (System.ComponentModel.Win32Exception e)
+            catch (Exception e)
             {
                 // fail with "only part of a ReadProcessMemory or WriteProcessMemory request was completed"?
+                // fail with "Cannot process request because the process has exited"?
                 // assume the process was closed or something
                 return 0;
             }

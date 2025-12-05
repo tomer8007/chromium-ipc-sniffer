@@ -159,9 +159,9 @@ local fragment_size = ProtoField.uint32 ("ipcz.fragsize"       , "Fragment Size"
 -- Router Descriptor
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/router_descriptor.h;l=25
 local closed_peer_sequence_length = ProtoField.uint64("ipcz.router.peerseqlen", "Closed Peer Sequence Length", base.HEX)
-local new_sublink = ProtoField.uint64("ipcz.router.newsublink", "New Sub-Link ID", base.HEX)
+local new_sublink = ProtoField.uint64("ipcz.router.newsublink", "New Sublink ID", base.HEX)
 local new_link_state_fragment = ProtoField.new("New Link State Memory Fragment", "ipcz.router.newlinkstate", ftypes.BYTES)
-local new_decaying_sublink = ProtoField.uint64("ipcz.router.newdecaysublink", "New Decaying Sub-Link ID", base.HEX)
+local new_decaying_sublink = ProtoField.uint64("ipcz.router.newdecaysublink", "New Decaying Sublink ID", base.HEX)
 local next_outgoing_seqnum = ProtoField.uint64("ipcz.router.nextseqnum", "Next Outgoing Sequence Number", base.HEX)
 local num_bytes_produced = ProtoField.uint64("ipcz.router.bytesproduced", "Total Outgoing Bytes Produced", base.DEC)
 local next_incoming_sequence_number = ProtoField.uint64("ipcz.router.nextinseqnum", "Next Incoming Sequence Number", base.HEX)
@@ -172,7 +172,7 @@ local flag_peer_closed = ProtoField.bool("ipcz.router.peerclosed", "peer_closed"
 local flag_proxy_already_bypassed = ProtoField.bool("ipcz.router.proxybypass", "proxy_already_bypassed", 8, {"Proxy was already bypassed", "Proxy was not bypassed"}, 0x2)
 local router_reserved = ProtoField.new("Reserved", "ipcz.router.reserved", ftypes.BYTES) -- 7 bytes
 local proxy_peer_node_name = ProtoField.new("Proxy Peer Node Name", "ipcz.router.proxypeernodename", ftypes.BYTES)
-local proxy_peer_sublink = ProtoField.uint64("ipcz.router.proxypeersublink", "Proxy Peer Sublink", base.HEX)
+local proxy_peer_sublink = ProtoField.uint64("ipcz.router.proxypeersublink", "Proxy Peer Sublink ID", base.HEX)
 
 -- RouteClosed
 -- https://source.chromium.org/chromium/chromium/src/+/refs/heads/main:third_party/ipcz/src/ipcz/node_messages_generator.h;l=371;drc=11ff9071e6112d0b830036e7c5bc2b00560649c0
@@ -614,12 +614,11 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
             offset2 = read_array_header(routersArrayTree, offset2, buffer)
 
             -- read the routers array contents
-            local router_descriptor_size = 112
+            local router_descriptor_size = 96 -- TODO: this could be 112 in chrome versions < june 2023. need a way to detect
             local router_index = 0
             while (router_index < num_elements) do
-                
                 local routerTree = routersArrayTree:add(buffer(offset2, router_descriptor_size), "Router #" .. (router_index+1))
-                offset2 = read_router_descriptor(routerTree, offset2, buffer)
+                offset2 = read_router_descriptor(routerTree, offset2, buffer, router_descriptor_size)
                 router_index = router_index + 1
             end
         else
@@ -1071,7 +1070,7 @@ function get_sharedbuffer_mode(type_id)
     return handle_type
 end
 
-function read_router_descriptor(subtree, offset, buffer)
+function read_router_descriptor(subtree, offset, buffer, expected_size)
     subtree:add_le(closed_peer_sequence_length, buffer(offset, 8));         offset = offset + 8
     subtree:add_le(new_sublink, buffer(offset, 8));                         offset = offset + 8
     
@@ -1085,10 +1084,16 @@ function read_router_descriptor(subtree, offset, buffer)
 
     subtree:add_le(new_decaying_sublink, buffer(offset, 8));                 offset = offset + 8
     subtree:add_le(next_outgoing_seqnum, buffer(offset, 8));                 offset = offset + 8
-    subtree:add_le(num_bytes_produced, buffer(offset, 8));                   offset = offset + 8
+    if expected_size == 112 then
+        -- pre june 2023 version
+        -- https://source.chromium.org/chromium/chromium/src/+/b4530aa7de95cf592269f2dcc1aeaef59c98d42a
+        subtree:add_le(num_bytes_produced, buffer(offset, 8));                   offset = offset + 8
+    end
     subtree:add_le(next_incoming_sequence_number, buffer(offset, 8));        offset = offset + 8
     subtree:add_le(decaying_incoming_sequence_length, buffer(offset, 8));    offset = offset + 8
-    subtree:add_le(num_bytes_consumed, buffer(offset, 8));                   offset = offset + 8
+    if expected_size == 112 then
+       subtree:add_le(num_bytes_consumed, buffer(offset, 8));                   offset = offset + 8
+    end
 
     local flagsTree = subtree:add(router_flags, buffer(offset, 1));            
     flagsTree:add_le(flag_peer_closed, buffer(offset, 1))

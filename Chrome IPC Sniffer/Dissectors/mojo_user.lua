@@ -17,10 +17,11 @@ local version                       = ProtoField.uint32 ("mojouser.version"  , "
 local interface_id                  = ProtoField.uint32 ("mojouser.interfaceid"  , "Interface ID"     , base.HEX)
 local name                          = ProtoField.uint32 ("mojouser.name"  , "Message Name (Method)"     , base.HEX)
 local flags                         = ProtoField.uint32 ("mojouser.flags"  , "Flags"     , base.HEX)
-local trace_id                      = ProtoField.uint32 ("mojouser.traceid"  , "Trace ID"     , base.HEX)
+local trace_id                      = ProtoField.uint32 ("mojouser.traceid"  , "Trace Nonce"     , base.HEX)
 local request_id                    = ProtoField.uint64 ("mojouser.requestid"  , "Request ID"     , base.HEX)
 local payload_pointer               = ProtoField.uint64 ("mojouser.payloadpointer"  , "Payload Pointer"     , base.DEC)
 local payload_interface_ids_pointer = ProtoField.uint64 ("mojouser.payloadinterfaceids"  , "Payload Interface IDs Pointer"     , base.DEC)
+local creation_timeticks_us         = ProtoField.uint64 ("mojouser.creationtimeticks"  , "Creation Timeticks (us units)"     , base.HEX)
 local serialized_data_struct_header = ProtoField.new("Struct Header", "mojouser.structheader", ftypes.BYTES)
 local method_parameters             = ProtoField.new("Nested Struct/Array Parameter", "mojouser.parameters", ftypes.BYTES)
 local arguments_values              = ProtoField.new("Arguments Values", "mojouser.argumentsvalues", ftypes.BYTES)
@@ -63,7 +64,7 @@ mojo_protocol.prefs.enable_deep_inspection = Pref.bool( "Enable structs deep dis
 mojo_protocol.fields = {
     source_pid_type, dest_pid_type,
     num_bytes, version,
-    interface_id, name, flags, trace_id, request_id, payload_pointer, payload_interface_ids_pointer, 
+    interface_id, name, flags, trace_id, request_id, payload_pointer, payload_interface_ids_pointer,  creation_timeticks_us,
     serialized_data_struct_header, method_parameters, arguments_values, struct_num_bytes, struct_version, struct_fields, array_num_bytes, array_elements_count,
     flag_expects_response, flag_is_reponse, flag_is_sync, flag_namespace_bit,
     definition_field, link_field, legacy_ipc_field, method,                                                     -- Meta fields
@@ -126,6 +127,9 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
         structHeaderTree:add_le(payload_pointer,                 buffer(offset,8));                                         offset = offset + 8
         structHeaderTree:add_le(payload_interface_ids_pointer,   buffer(offset,8));                                         offset = offset + 8
     end
+    if _version()() >= 3 then
+        structHeaderTree:add_le(creation_timeticks_us,           buffer(offset,8));                                         offset = offset + 8
+    end
 
     dataSubtree = subtree:add(buffer(offset), "Serialized Arguments (Payload)")
 
@@ -185,7 +189,6 @@ function mojo_protocol.dissector(buffer, pinfo, tree)
     --
 
     -- Read the arguments struct. 
-    -- TODO: I think that in version 3 of the mojouser this part is gone
     local structs_layout_map = {}
     parametersSubtree = dataSubtree:add(buffer(offset), "Main Arguments Struct")
     parametersSubtree:add_le(struct_num_bytes, buffer(offset, 4));                              offset = offset + 4
