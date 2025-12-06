@@ -129,14 +129,6 @@ namespace Wireshark
             this.PipeName = pipe_name;
             this.PcapNetID = pcap_netid;
 
-            // Open the pipe and wait to Wireshark on a background thread
-            Thread th = new Thread(PipeCreate);
-            th.IsBackground = true;
-            th.Start();
-        }
-
-        private void PipeCreate()
-        {
             try
             {
                 WiresharkPipe = new NamedPipeServerStream(PipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
@@ -147,6 +139,14 @@ namespace Wireshark
                 Environment.Exit(1);
             }
 
+            // Open the pipe and wait to Wireshark on a background thread
+            Thread th = new Thread(WaitForPipeConnection);
+            th.IsBackground = true;
+            th.Start();
+        }
+
+        private void WaitForPipeConnection()
+        {
             // Wait
             WiresharkPipe.WaitForConnection();
 
@@ -214,13 +214,14 @@ namespace Wireshark
             }
             catch (System.IO.IOException)
             {
-                // broken pipe, try to restart
+                // broken pipe, try to restart?
+                // or wireshark just got closed
                 IsConnected = false;
                 WiresharkPipe.Close();
                 WiresharkPipe.Dispose();
-                Thread th = new Thread(PipeCreate);
-                th.IsBackground = true;
-                th.Start();
+                //Thread th = new Thread(WaitForPipeConnection);
+                //th.IsBackground = true;
+                //th.Start();
                 return false;
             }
             catch (Exception)

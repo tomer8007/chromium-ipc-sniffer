@@ -10,21 +10,39 @@ namespace ChromiumIPCSniffer
     {
         static readonly int[] Empty = new int[0];
 
-        public static int[] Locate(this byte[] self, byte[] candidate, int maxResults = int.MaxValue)
+        public static int[] Locate(this byte[] self, byte[] toFind, int maxResults = int.MaxValue)
         {
-            if (IsEmptyLocate(self, candidate))
+            if (IsEmptyLocate(self, toFind))
                 return Empty;
 
             var list = new List<int>();
 
             for (int i = 0; i < self.Length; i++)
             {
-                if (!IsMatch(self, i, candidate))
+                if (!IsMatch(self, i, toFind))
                     continue;
 
                 list.Add(i);
 
                 if (list.Count >= maxResults) return list.ToArray();
+            }
+
+            return list.Count == 0 ? Empty : list.ToArray();
+        }
+
+        public static int[] Locate(this byte[] self, byte[] candidate, int startingIndex, int size)
+        {
+            if (IsEmptyLocate(self, candidate))
+                return Empty;
+
+            var list = new List<int>();
+
+            for (int i = startingIndex; i < startingIndex + size; i++)
+            {
+                if (!IsMatch(self, i, candidate))
+                    continue;
+
+                list.Add(i);
             }
 
             return list.Count == 0 ? Empty : list.ToArray();

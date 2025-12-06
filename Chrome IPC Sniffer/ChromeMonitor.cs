@@ -75,6 +75,7 @@ namespace ChromiumIPCSniffer
         public void StartMonitoring()
         {
             processMonitoringThread = new Thread(new ThreadStart(ProcessPollingThread)) { Priority = ThreadPriority.AboveNormal };
+            processMonitoringThread.IsBackground = true;
             processMonitoringThread.Start();
         }
 

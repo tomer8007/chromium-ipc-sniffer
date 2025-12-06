@@ -60,6 +60,7 @@ namespace ChromiumIPCSniffer
             if (!success)
             {
                 Console.WriteLine("[-] VirtualProtectEx failed on PID " + p.Id + ", error: " + Marshal.GetLastWin32Error());
+                CloseHandle(hProc.DangerousGetHandle());
                 return false;
             }
 
@@ -68,6 +69,7 @@ namespace ChromiumIPCSniffer
             if (!success)
             {
                 Console.WriteLine("[-] WriteProcessMemory failed on PID " + p.Id + ". error: " + Marshal.GetLastWin32Error());
+                CloseHandle(hProc.DangerousGetHandle());
                 return false;
             }
 
@@ -76,6 +78,7 @@ namespace ChromiumIPCSniffer
             if (!success)
             {
                 Console.WriteLine("[-] VirtualProtectEx (second call) failed on PID " + p.Id + ". error: " + Marshal.GetLastWin32Error());
+                CloseHandle(hProc.DangerousGetHandle());
                 return false;
             }
 
@@ -100,6 +103,7 @@ namespace ChromiumIPCSniffer
             if (!success)
             {
                 Console.WriteLine("[-] ReadProcessMemory failed on PID " + p.Id + ", Error: " + Marshal.GetLastWin32Error());
+                CloseHandle(hProc.DangerousGetHandle());
                 return null;
             }
             
