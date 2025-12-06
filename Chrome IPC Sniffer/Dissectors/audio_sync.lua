@@ -47,14 +47,14 @@ function sync_protocol.dissector(buffer, pinfo, tree)
 
         pinfo.cols.info = tostring(pinfo.cols.info) .. ": Buffer #" .. _bufferindex()()
     else
-        subtree:add_le(control_signal,        buffer(offset,4)):append_text(" (" .. get_code_name(_controlcode()()) .. ")");        offset = offset + 4
+        subtree:add_le(control_signal,        buffer(offset,4)):append_text(" (" .. get_opcode_name(_controlcode()()) .. ")");        offset = offset + 4
 
-        pinfo.cols.info = tostring(pinfo.cols.info) .. " (" .. get_code_name(_controlcode()()) .. ")"
+        pinfo.cols.info = tostring(pinfo.cols.info) .. " (" .. get_opcode_name(_controlcode()()) .. ")"
     end
 
 end
 
-function get_code_name(opcode)
+function get_opcode_name(opcode)
     local opcode_name = "Unknown"
 
     if opcode ==  0 then opcode_name = "Request More Data" end
