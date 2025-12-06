@@ -744,8 +744,8 @@ function mojom_bytes_to_string(field_type, module_path, bytes, bool_bit)
     elseif field_type == "string" then
         fieldString = "\"" .. bytes:string() .. "\""
     elseif field_type == "bool" then
-        local anded_value = bit32.lshift(1, bool_bit)
-        local bool_value = bit32.band(common.numLong(bytes:string()), anded_value)
+        local anded_value = bit.lshift(1, bool_bit)
+        local bool_value = bit.band(common.numLong(bytes:string()), anded_value)
 
         if bool_value == 0 then
             fieldString = "false"
