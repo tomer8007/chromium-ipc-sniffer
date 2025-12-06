@@ -614,7 +614,7 @@ function ipcz_protocol.dissector(buffer, pinfo, tree)
             offset2 = read_array_header(routersArrayTree, offset2, buffer)
 
             -- read the routers array contents
-            local router_descriptor_size = 96 -- TODO: this could be 112 in chrome versions < june 2023. need a way to detect
+            local router_descriptor_size = header_size_value > 8 and 96 or 112  -- TODO: this could be 112 in chrome versions < june 2023. need a better way to detect
             local router_index = 0
             while (router_index < num_elements) do
                 local routerTree = routersArrayTree:add(buffer(offset2, router_descriptor_size), "Router #" .. (router_index+1))

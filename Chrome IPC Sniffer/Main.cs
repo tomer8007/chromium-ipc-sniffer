@@ -63,11 +63,11 @@ namespace ChromiumIPCSniffer
                 Console.WriteLine("[!] Cached info is for " + mojoVersion + ", you may run --update-interfaces-info");
             }
 
-            MethodHashesExtractor.ExtractMethodNames(chromeMonitor.DLLPath, force: forceExtractMethodNames);
-            ChromePatcher chromePatcher = new ChromePatcher(chromeMonitor);
-
             bool success = UpdateWiresharkConfiguration();
             if (!success) return;
+
+            MethodHashesExtractor.ExtractMethodNames(chromeMonitor.DLLPath, force: forceExtractMethodNames);
+            ChromePatcher chromePatcher = new ChromePatcher(chromeMonitor);
 
             Console.WriteLine("[+] Enumerating existing chrome pipes");
             HandlesUtility.EnumerateExistingHandles(ChromeMonitor.GetRunningChromeProcesses());
