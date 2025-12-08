@@ -97,7 +97,8 @@ namespace ChromiumIPCSniffer
             processingLoopThread.Start();
 
             Thread statisticsThread = new Thread(new ThreadStart(StatisticsThread));
-            statisticsThread.Start();
+            statisticsThread.IsBackground = true;
+            //statisticsThread.Start(); // TODO: we need to make it so that the statistics will not visually overwite the other logs
 
             return true;
         }
@@ -367,7 +368,7 @@ namespace ChromiumIPCSniffer
             // Send it off
             //
             this.numPacketsProcessed++;
-            byte[] wiresharkPacket = GenerateWiresharkPacket(notificationHeader, writeParams, pipeName, destinationPID, data);
+            byte[] wiresharkPacket = GenerateWiresharkPacket(notificationHeader, writeParams, chromeMonitor.ChromeVersion, pipeName, destinationPID, data);
             wiresharkSender.SendToWiresharkAsEthernet(wiresharkPacket, 0);
 
         }
@@ -428,13 +429,18 @@ namespace ChromiumIPCSniffer
         }
 
         public byte[] GenerateWiresharkPacket(TDevMonitor.dm_NotifyHdr header, TDevMonitor.dm_ReadWriteNotifyParams writeParams,
-                                              string pipeName, UInt32 destPID, byte[] data)
+                                              string chromeVersion, string pipeName, UInt32 destPID, byte[] data)
         {
             MemoryStream memoryStream = new MemoryStream();
             BinaryWriter writer = new BinaryWriter(memoryStream);
 
             UInt32 sourcePID = header.processId;
 
+            int headerVersion = 0;
+            byte[] headerVersionBigEndian = BitConverter.GetBytes(headerVersion); Array.Reverse(headerVersionBigEndian);
+
+            writer.Write(headerVersion);
+            writer.Write(chromeVersion);
             writer.Write(header.code);
             writer.Write(sourcePID);
             writer.Write(destPID);

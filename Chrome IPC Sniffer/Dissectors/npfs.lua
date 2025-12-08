@@ -3,16 +3,19 @@ npfs_protocol = Proto("NPFS",  "NamedPipe Capture Protocol")
 local get_chrome_name = require("helpers\\common").get_chrome_type_name
 
 -- Header fields
-local code                  = ProtoField.int16 ("npfs.code"             , "Code"     , base.DEC)
-local source_pid            = ProtoField.int32 ("npfs.sourcepid"       , "Source PID"         , base.DEC)
-local source_pid_type       = ProtoField.int32 ("npfs.sourcetype"       , "Source Process Type"         , base.DEC)
+local header_version        = ProtoField.int32 ("npfs.headerver"        , "Header version"          , base.DEC)
+local chrome_version_length = ProtoField.int8 ("npfs.chromverlen"       , "Chromium Version Length" , base.DEC)
+local chrome_version        = ProtoField.string ("npfs.chromever"       , "Chromium Version"        , base.ASCII)
+local code                  = ProtoField.int16 ("npfs.code"             , "I/O Code"                    , base.DEC)
+local source_pid            = ProtoField.int32 ("npfs.sourcepid"        , "Source PID"              , base.DEC)
+local source_pid_type       = ProtoField.int32 ("npfs.sourcetype"       , "Source Process Type"     , base.DEC)
 local dest_pid              = ProtoField.int32 ("npfs.destpid"          , "Destination PID"         , base.DEC)
-local dest_pid_type         = ProtoField.int32 ("npfs.desttype"         , "Destination Process Type"         , base.DEC)
+local dest_pid_type         = ProtoField.int32 ("npfs.desttype"         , "Destination Process Type", base.DEC)
 
-local thread_id             = ProtoField.int32 ("npfs.threadid"         , "Thread TID"        , base.DEC)
+local thread_id             = ProtoField.int32 ("npfs.threadid"         , "Thread TID"              , base.DEC)
 local pipe_name_length      = ProtoField.int8 ("npfs.pipenamelength"    , "Pipe Name Length"        , base.DEC)
-local pipe_name             = ProtoField.string ("npfs.pipename"        , "Pipe Name"        , base.ASCII)
-local timestamp             = ProtoField.int64 ("npfs.timestamp"        , "Timestamp"            , base.DEC)
+local pipe_name             = ProtoField.string ("npfs.pipename"        , "Pipe Name"               , base.ASCII)
+local timestamp             = ProtoField.int64 ("npfs.timestamp"        , "Timestamp"               , base.DEC)
 
 local raw_data              = ProtoField.new("Raw Data", "npfs.data", ftypes.BYTES)
 
@@ -31,7 +34,7 @@ local expert_info_pipeerror = ProtoExpert.new("npfs.pipeerror", "Could not find 
 
 
 npfs_protocol.fields = {
-  code, source_pid, source_pid_type, dest_pid, dest_pid_type, thread_id, pipe_name_length, pipe_name, timestamp, data_length,   -- Header
+  header_version, chrome_version_length, chrome_version, code, source_pid, source_pid_type, dest_pid, dest_pid_type, thread_id, pipe_name_length, pipe_name, timestamp, data_length,   -- Header
   raw_data,                                                                                                                     -- Extra Fields
   s_pid, d_pid, s_type, d_type,                                                                                                 -- Hidden Fields
 }
@@ -58,7 +61,15 @@ function npfs_protocol.dissector(buffer, pinfo, tree)
 
     -- Header
     local offset = 0
-    code_value = buffer(offset,2):le_uint()
+    local code_value = buffer(offset,2):le_uint()
+    if code_value >= 0 and code_value < 8 then
+        -- this is not a code value, in fact it's a newer version of this header, with version field
+        subtree:add(header_version,    buffer(offset,4));                                                                           offset = offset + 4
+        local chrome_version_length_value =      buffer(offset,1):le_uint()
+        subtree:add_le(chrome_version_length,    buffer(offset,1));                                                                  offset = offset + 1
+        subtree:add_le(chrome_version,           buffer(offset, chrome_version_length_value));                                       offset = offset + chrome_version_length_value
+        code_value = buffer(offset,2):le_uint()
+    end
     subtree:add_le(code,                buffer(offset,2)):append_text(" (" .. get_code_name(code_value) .. ")");            offset = offset + 2
     subtree:add_le(source_pid,          buffer(offset,4));                                                                  offset = offset + 4
     subtree:add_le(dest_pid,            buffer(offset,4));                                                                  offset = offset + 4

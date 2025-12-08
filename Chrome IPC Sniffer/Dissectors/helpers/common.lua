@@ -20,6 +20,9 @@ function common.get_chrome_type_name(opcode)
   if opcode == 11 then opcode_name = "Network Service" end
   if opcode == 12 then opcode_name = "Audio Service" end
   if opcode == 13 then opcode_name = "CDM Service" end
+  if opcode == 14 then opcode_name = "Crashpad Handler" end
+  if opcode == 15 then opcode_name = "Ppapi Broker" end
+  if opcode == 16 then opcode_name = "Utility" end
 
   return opcode_name
 end

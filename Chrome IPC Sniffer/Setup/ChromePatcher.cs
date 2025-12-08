@@ -14,6 +14,8 @@ namespace ChromiumIPCSniffer
     /// </summary>
     class ChromePatcher
     {
+        private Dictionary<int, bool> pidToPatchStatusTable = new Dictionary<int, bool>();
+
         private long patchOffsetInDll = -1;
         private long TEXT_SECTION_RUNTIME_TO_DISK_DELTA = 0x1000 - 0x600; // .text section VirtualAddress - PointerToRawData = 0xA00.    TODO: read this from PE
         private ChromeMonitor chromeMonitor;
@@ -81,21 +83,7 @@ namespace ChromiumIPCSniffer
         {
             Console.WriteLine("[+] Starting patching of Chrome processes");
 
-            List<int> chromePIDs = chromeMonitor.GetRunningChromePIDs();
-            foreach (int chromePID in chromePIDs)
-            {
-                try
-                {
-                    Process chromeProcess = Process.GetProcessById(chromePID);
-                    PatchProcess(chromeProcess);
-                }
-                catch (ArgumentException e)
-                {
-                    // process ID not running? maybe it was closed
-                    continue;
-                }
-
-            }
+            PatchRunningProcesses();
 
             // make sure to patch newly created chrome proceses as well
             chromeMonitor.StartMonitoring();
@@ -103,9 +91,36 @@ namespace ChromiumIPCSniffer
 
         }
 
+        public void PatchRunningProcesses()
+        {
+            Process[] chromeProcesses = ChromeMonitor.GetRunningChromeProcesses();
+            foreach (Process chromeProcess in chromeProcesses)
+            {
+                if (pidToPatchStatusTable.ContainsKey(chromeProcess.Id) && pidToPatchStatusTable[chromeProcess.Id] == true)
+                    continue; // don't try to patch proceses we patched successfuly earlier
+
+                //Process chromeProcess = null;
+                //try
+                //{
+                //    chromeProcess = Process.GetProcessById(chromePID);
+                //}
+                //catch (ArgumentException e)
+                //{
+                //    // process ID not running? maybe it was closed
+                //    Console.WriteLine("[!] Skipping PID " + chromePID);
+                //    continue;
+                //}
+
+                PatchProcess(chromeProcess);
+            }
+        }
+
         private void OnNewChromeProcess(Process newProcess)
         {
-            PatchProcess(newProcess);
+            Console.WriteLine("[+] Seeing new PID: " + newProcess.Id);
+            bool patchSucceeded = TryToPatchProcess(newProcess);
+            pidToPatchStatusTable[newProcess.Id] = patchSucceeded;
+            PatchRunningProcesses();
         }
 
         public void Stop()
@@ -115,22 +130,69 @@ namespace ChromiumIPCSniffer
 
         public bool PatchProcess(Process chromeProcess)
         {
+            bool success = TryToPatchProcess(chromeProcess);
+            pidToPatchStatusTable[chromeProcess.Id] = success;
+
+            return success;
+        }
+
+        public bool TryToPatchProcess(Process chromeProcess)
+        {
             if (patchOffsetInDll == -1) return true;
 
-            Console.WriteLine("[+] Patching PID " + chromeProcess.Id);
+            IntPtr moduleBase = new IntPtr(0);
 
-            long moduleBase = chromeMonitor.GetChromeModuleAddress(chromeProcess);
-            if (moduleBase == 0)
+            int maxAttempts = 3;
+            for (int i = 0; i < maxAttempts; i++)
             {
-                //Console.WriteLine("[!] skipping patching of PID " + chromeProcess.Id);
-                return false;
+                try
+                {
+                    moduleBase = chromeProcess.GetModuleBaseAddress("chrome.dll");
+
+                    if (moduleBase == IntPtr.Zero)
+                    {
+                        // maybe it just wasn't loaded yet
+                        // try again
+                        Console.WriteLine("[-] Couldn't find chrome.dll in PID " + chromeProcess.Id);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (e.Message.Contains("has exited"))
+                    {
+                        // some new processes are immediately closed, consider this successful
+                        return true;
+                    }
+
+                    // fail with "only part of a ReadProcessMemory or WriteProcessMemory request was completed"?
+                    // assume the process was closed or something (some new processes are immediately closed)
+                    // try again
+                    Console.WriteLine("[!] skipping patching of PID " + chromeProcess.Id + " because of error: " + e.Message);
+                }
+
+                Thread.Sleep(700);
             }
 
-            long patchAddress = moduleBase + TEXT_SECTION_RUNTIME_TO_DISK_DELTA + patchOffsetInDll;
+            if (moduleBase == IntPtr.Zero)
+            {
+                // some chrome processes don't have chrome.dll loaded.
+                if (chromeProcess.GetCommandLine().Contains("--type=crashpad-handler"))
+                {
+                    Console.WriteLine("[!] Giving up on patching crashpad handler PID " + chromeProcess.Id);
+                    return true; // consider success
+                }
 
-            byte[] oldMemoryContents = chromeProcess.ReadMemory(new IntPtr(patchAddress), this.conditionInstructionToLookFor.Length);
-            if (oldMemoryContents == null)
-                return false;
+                return false; // try again in the future
+            }
+
+
+
+            IntPtr patchAddress = new IntPtr(moduleBase.ToInt64() + TEXT_SECTION_RUNTIME_TO_DISK_DELTA + patchOffsetInDll);
+
+            Console.WriteLine("[+] Patching PID " + chromeProcess.Id + " at adress 0x" + patchAddress.ToString("X"));
+
+            byte[] oldMemoryContents = chromeProcess.ReadMemory(patchAddress, this.conditionInstructionToLookFor.Length);
+            if (oldMemoryContents == null) return false;
 
             if (oldMemoryContents[0] != this.conditionInstructionToLookFor[0])
             {
@@ -138,7 +200,21 @@ namespace ChromiumIPCSniffer
                 return false;
             }
 
-            return chromeProcess.WriteMemory(new IntPtr(patchAddress), this.conditionInstructionToPatch);
+            bool writeMemorySuccess = chromeProcess.WriteMemory(patchAddress, this.conditionInstructionToPatch);
+            if (!writeMemorySuccess) return false;
+
+            byte[] newMemoryContents = chromeProcess.ReadMemory(patchAddress, this.conditionInstructionToLookFor.Length);
+            if (oldMemoryContents == null) return false;
+
+            if (newMemoryContents.Last() != this.conditionInstructionToPatch.Last())
+            {
+                Console.WriteLine("[-] Pathing of PID " + chromeProcess.Id + " was not successful.");
+                return false;
+            }
+
+            Console.WriteLine("[+] Pathing of PID " + chromeProcess.Id + " was successful.");
+
+            return true;
         }
     }
 }

@@ -129,9 +129,16 @@ namespace Wireshark
             this.PipeName = pipe_name;
             this.PcapNetID = pcap_netid;
 
+            // Open the pipe and wait to Wireshark on a background thread
+            Thread th = new Thread(CreatePipeAndWaitForConnection);
+            th.Start();
+        }
+
+        private void CreatePipeAndWaitForConnection()
+        {
             try
             {
-                WiresharkPipe = new NamedPipeServerStream(PipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                WiresharkPipe = new NamedPipeServerStream(PipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.None);
             }
             catch (IOException)
             {
@@ -139,14 +146,6 @@ namespace Wireshark
                 Environment.Exit(1);
             }
 
-            // Open the pipe and wait to Wireshark on a background thread
-            Thread th = new Thread(WaitForPipeConnection);
-            th.IsBackground = true;
-            th.Start();
-        }
-
-        private void WaitForPipeConnection()
-        {
             // Wait
             WiresharkPipe.WaitForConnection();
 
@@ -212,16 +211,17 @@ namespace Wireshark
                 // Bacnet packet
                 WiresharkPipe.Write(buffer, offset, lenght);
             }
-            catch (System.IO.IOException)
+            catch (System.IO.IOException e)
             {
+                Console.WriteLine("[-] pipe error: " + e.Message, ", trying to restart");
                 // broken pipe, try to restart?
                 // or wireshark just got closed
                 IsConnected = false;
                 WiresharkPipe.Close();
                 WiresharkPipe.Dispose();
-                //Thread th = new Thread(WaitForPipeConnection);
-                //th.IsBackground = true;
-                //th.Start();
+                Thread th = new Thread(CreatePipeAndWaitForConnection);
+                th.IsBackground = true;
+                th.Start();
                 return false;
             }
             catch (Exception)

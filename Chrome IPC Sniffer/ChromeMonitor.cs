@@ -9,6 +9,7 @@ using System.Management;
 using Newtonsoft.Json;
 using System.Net;
 using System.Threading;
+using System.Collections.Concurrent;
 
 namespace ChromiumIPCSniffer
 {
@@ -17,13 +18,17 @@ namespace ChromiumIPCSniffer
     public class ChromeMonitor
     {
         // This should be updated whenever a chrome process gets created/destryoed
-        private Dictionary<UInt32, ProcessInfo> RunningProcessesCache = new Dictionary<UInt32, ProcessInfo>();
+        private ConcurrentDictionary<UInt32, ProcessInfo> RunningProcessesCache = new ConcurrentDictionary<UInt32, ProcessInfo>();
+        private Process[] previouslyRunningProcesses = new Process[0];
 
         public string DLLPath = string.Empty;
         public string ChromeVersion = string.Empty;
 
         private Thread processMonitoringThread;
         private bool isShuttingDown = false;
+
+        // On Windows, the same DLL should mapped at the same address in all processes
+        private long cachedChromeDllBase = 0;
 
         public event OnNewChromeProcessDelegate NewChromeProcessCallback;
 
@@ -45,16 +50,14 @@ namespace ChromiumIPCSniffer
 
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-        }
+            previouslyRunningProcesses = GetRunningChromeProcesses();
 
-        public List<int> GetRunningChromePIDs()
-        {
-            return RunningProcessesCache.Values.Where(processInfo => processInfo.Name.Contains("chrome")).Select(processInfo => processInfo.PID).ToList();
         }
 
         public void UpdateRunningProcessesCache()
         {
             Process[] runningProcesses = Process.GetProcesses();
+
             foreach (Process process in runningProcesses)
             {
                 ProcessInfo processInfo;
@@ -62,12 +65,6 @@ namespace ChromiumIPCSniffer
                 processInfo.Name = process.ProcessName;
                 processInfo.CommandLine = processInfo.Name == "chrome" ? process.GetCommandLine() : "";
 
-
-                if (!RunningProcessesCache.ContainsKey((UInt32)process.Id))
-                {
-                    // seems like a new process
-                    if (NewChromeProcessCallback != null) NewChromeProcessCallback(process);
-                }
                 RunningProcessesCache[(UInt32)process.Id] = processInfo;
             }
         }
@@ -88,9 +85,26 @@ namespace ChromiumIPCSniffer
         {
             while (!isShuttingDown)
             {
-                UpdateRunningProcessesCache();
-                Thread.Sleep(2000);
+                CheckForNewProcesses();
+                Thread.Sleep(200);
             }
+        }
+
+        private void CheckForNewProcesses()
+        {
+            Process[] runningProcesses = GetRunningChromeProcesses();
+
+            foreach (Process process in runningProcesses)
+            {
+                // are we missing this process from our known processes list?
+                if (previouslyRunningProcesses.Where(p => p.Id == process.Id && p.StartTime == process.StartTime).ToList().Count == 0)
+                {
+                    // seems like a new process
+                    NewChromeProcessCallback?.Invoke(process);
+                }
+            }
+
+            previouslyRunningProcesses = runningProcesses;
         }
 
         public bool IsChromeProcess(UInt32 pid)
@@ -107,17 +121,16 @@ namespace ChromiumIPCSniffer
 
         public long GetChromeModuleAddress(Process process)
         {
-            try
+            long baseAddress = process.GetModuleBaseAddress("chrome.dll").ToInt64();
+            if (baseAddress == -1)
             {
-                return process.GetModuleBaseAddress("chrome.dll").ToInt64();
+                // not found
+                return -1;
             }
-            catch (Exception e)
-            {
-                // fail with "only part of a ReadProcessMemory or WriteProcessMemory request was completed"?
-                // fail with "Cannot process request because the process has exited"?
-                // assume the process was closed or something
-                return 0;
-            }
+
+            cachedChromeDllBase = baseAddress;
+
+            return cachedChromeDllBase;
         }
 
         public ChromeProcessType GetChromeProcessType(UInt32 chromePID)
@@ -147,8 +160,10 @@ namespace ChromiumIPCSniffer
             else if (commandLine.Contains("--utility-sub-type=audio.mojom.AudioService")) type = ChromeProcessType.AudioService;
             else if (commandLine.Contains("--utility-sub-type=network.mojom.NetworkService")) type = ChromeProcessType.NetworkService;
             else if (commandLine.Contains("--service-sandbox-type=cdm")) type = ChromeProcessType.ContentDecryptionModuleService;
+            else if (commandLine.Contains("--type=crashpad=handler")) type = ChromeProcessType.CrashpadHandler;
             else if (commandLine.Contains("--type=gpu-process")) type = ChromeProcessType.GpuProcess;
             else if (commandLine.Contains("--type=renderer")) type = ChromeProcessType.Renderer;
+            else if (commandLine.Contains("--type=utility")) type = ChromeProcessType.Utility;
 
             return type;
         }
@@ -178,6 +193,7 @@ namespace ChromiumIPCSniffer
             ContentDecryptionModuleService,
             CrashpadHandler,
             PpapiBroker,
+            Utility,
         }
 
         public static Process[] GetRunningChromeProcesses()
