@@ -138,7 +138,7 @@ namespace Wireshark
         {
             try
             {
-                WiresharkPipe = new NamedPipeServerStream(PipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.None);
+                WiresharkPipe = new NamedPipeServerStream(PipeName, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
             }
             catch (IOException)
             {

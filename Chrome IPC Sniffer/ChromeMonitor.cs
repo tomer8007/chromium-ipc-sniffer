@@ -28,7 +28,7 @@ namespace ChromiumIPCSniffer
         private bool isShuttingDown = false;
 
         // On Windows, the same DLL should mapped at the same address in all processes
-        private long cachedChromeDllBase = 0;
+        private IntPtr cachedChromeDllBase = IntPtr.Zero;
 
         public event OnNewChromeProcessDelegate NewChromeProcessCallback;
 
@@ -86,7 +86,7 @@ namespace ChromiumIPCSniffer
             while (!isShuttingDown)
             {
                 CheckForNewProcesses();
-                Thread.Sleep(200);
+                Thread.Sleep(50);
             }
         }
 
@@ -95,9 +95,8 @@ namespace ChromiumIPCSniffer
             Process[] runningProcesses = GetRunningChromeProcesses();
 
             foreach (Process process in runningProcesses)
-            {
-                // are we missing this process from our known processes list?
-                if (previouslyRunningProcesses.Where(p => p.Id == process.Id && p.StartTime == process.StartTime).ToList().Count == 0)
+            {                
+                if (IsNewProcess(process))
                 {
                     // seems like a new process
                     NewChromeProcessCallback?.Invoke(process);
@@ -105,6 +104,44 @@ namespace ChromiumIPCSniffer
             }
 
             previouslyRunningProcesses = runningProcesses;
+        }
+
+        private bool IsNewProcess(Process maybeNewProcess)
+        {
+            DateTime maybeNewProcessStartTime = new DateTime();
+            try
+            {
+                maybeNewProcessStartTime = maybeNewProcess.StartTime;
+            }
+            catch (Exception e)
+            {
+                // probably this process was just closed
+                return false;
+            }
+
+            bool foundProcessInOldProcessList = false;
+            foreach (Process p in previouslyRunningProcesses)
+            {
+                DateTime processStartTime = new DateTime();
+                try
+                {
+                    processStartTime = p.StartTime;
+                }
+                catch (Exception e)
+                {
+                    // probably this process was just closed
+                    continue;
+                }
+
+                if (processStartTime == maybeNewProcessStartTime && p.Id == maybeNewProcess.Id)
+                {
+                    foundProcessInOldProcessList = true;
+                    break;
+                }
+            }
+
+            bool isNewProcess = !foundProcessInOldProcessList;
+            return isNewProcess;
         }
 
         public bool IsChromeProcess(UInt32 pid)
@@ -117,20 +154,6 @@ namespace ChromiumIPCSniffer
             {
                 return false;
             }
-        }
-
-        public long GetChromeModuleAddress(Process process)
-        {
-            long baseAddress = process.GetModuleBaseAddress("chrome.dll").ToInt64();
-            if (baseAddress == -1)
-            {
-                // not found
-                return -1;
-            }
-
-            cachedChromeDllBase = baseAddress;
-
-            return cachedChromeDllBase;
         }
 
         public ChromeProcessType GetChromeProcessType(UInt32 chromePID)
