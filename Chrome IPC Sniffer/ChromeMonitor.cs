@@ -14,6 +14,7 @@ using System.Collections.Concurrent;
 namespace ChromiumIPCSniffer
 {
     public delegate void OnNewChromeProcessDelegate(Process newProcess);
+    public delegate void OnNewChromeProcessListRefreshedDelegate(Process[] chromeProcesses);
 
     public class ChromeMonitor
     {
@@ -31,6 +32,7 @@ namespace ChromiumIPCSniffer
         private IntPtr cachedChromeDllBase = IntPtr.Zero;
 
         public event OnNewChromeProcessDelegate NewChromeProcessCallback;
+        public event OnNewChromeProcessListRefreshedDelegate ChromeProcessListRefreshCallback;
 
         public ChromeMonitor(string dllPath = null)
         {
@@ -103,6 +105,8 @@ namespace ChromiumIPCSniffer
                 }
             }
 
+            ChromeProcessListRefreshCallback?.Invoke(runningProcesses);
+
             previouslyRunningProcesses = runningProcesses;
         }
 
@@ -154,6 +158,27 @@ namespace ChromiumIPCSniffer
             {
                 return false;
             }
+        }
+
+        public IntPtr GetChromeDllBase(Process p)
+        {
+            if (cachedChromeDllBase != IntPtr.Zero)
+            {
+                byte[] memory = p.TryReadMemory(cachedChromeDllBase, 4);
+                if (memory == null) return IntPtr.Zero; // proabably not loaded
+                if (memory[0] == (byte)'M' && memory[1] == (byte)'Z')
+                {
+                    return cachedChromeDllBase;
+                }
+                else
+                {
+                    // looks like it's not loaded
+                    return IntPtr.Zero;
+                }
+            }
+
+            cachedChromeDllBase = p.GetModuleBaseAddress("chrome.dll");
+            return cachedChromeDllBase;
         }
 
         public ChromeProcessType GetChromeProcessType(UInt32 chromePID)

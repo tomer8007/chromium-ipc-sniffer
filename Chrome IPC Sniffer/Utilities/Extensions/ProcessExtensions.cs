@@ -55,34 +55,27 @@ namespace ChromiumIPCSniffer
         {
             var hProc = OpenProcess(ProcessAccessRights.PROCESS_VM_WRITE | ProcessAccessRights.PROCESS_VM_READ | ProcessAccessRights.PROCESS_VM_OPERATION, false, (int)p.Id);
 
-            MemPageProtect oldProtect;
-            bool success = VirtualProtectEx(hProc.DangerousGetHandle(), address, data.Length, MemPageProtect.PAGE_EXECUTE_READWRITE, out oldProtect);
+            bool success = VirtualProtectEx(hProc.DangerousGetHandle(), address, data.Length, MemPageProtect.PAGE_EXECUTE_READWRITE, out MemPageProtect oldProtect);
             if (!success)
             {
                 Console.WriteLine("[-] VirtualProtectEx failed on PID " + p.Id + ", error: " + Marshal.GetLastWin32Error());
-                CloseHandle(hProc.DangerousGetHandle());
                 return false;
             }
 
-            int wtf = 0;
-            success = WriteProcessMemory(hProc.DangerousGetHandle(), address, data, data.Length, out wtf);
+            success = WriteProcessMemory(hProc.DangerousGetHandle(), address, data, data.Length, out int wtf);
             if (!success)
             {
                 Console.WriteLine("[-] WriteProcessMemory failed on PID " + p.Id + ". error: " + Marshal.GetLastWin32Error());
-                CloseHandle(hProc.DangerousGetHandle());
                 return false;
             }
 
-            MemPageProtect oldProtect2;
-            success = VirtualProtectEx(hProc.DangerousGetHandle(), address, data.Length, oldProtect, out oldProtect2);
+            success = VirtualProtectEx(hProc.DangerousGetHandle(), address, data.Length, oldProtect, out MemPageProtect oldProtect2);
             if (!success)
             {
                 Console.WriteLine("[-] VirtualProtectEx (second call) failed on PID " + p.Id + ". error: " + Marshal.GetLastWin32Error());
-                CloseHandle(hProc.DangerousGetHandle());
                 return false;
             }
 
-            CloseHandle(hProc.DangerousGetHandle());
 
             return true;
         }
@@ -98,17 +91,30 @@ namespace ChromiumIPCSniffer
             }
 
             byte[] dataRead = new byte[size];
-            int wtf = 0;
-            bool success = ReadProcessMemory(hProc.DangerousGetHandle(), address, dataRead, dataRead.Length, out wtf);
+            bool success = ReadProcessMemory(hProc.DangerousGetHandle(), address, dataRead, dataRead.Length, out int numBytesRead);
             if (!success)
             {
                 Console.WriteLine("[-] ReadProcessMemory failed on PID " + p.Id + ", Error: " + Marshal.GetLastWin32Error());
-                CloseHandle(hProc.DangerousGetHandle());
                 return null;
             }
             
+            return dataRead;
+        }
 
-            CloseHandle(hProc.DangerousGetHandle());
+        public static byte[] TryReadMemory(this Process p, IntPtr address, long size)
+        {
+            SafeProcessHandle hProc = OpenProcess(ProcessAccessRights.PROCESS_VM_READ, false, (int)p.Id);
+            if (hProc.IsInvalid)
+            {
+                return null;
+            }
+
+            byte[] dataRead = new byte[size];
+            bool success = ReadProcessMemory(hProc.DangerousGetHandle(), address, dataRead, dataRead.Length, out int wtf);
+            if (!success)
+            {
+                return null;
+            }
 
             return dataRead;
         }
@@ -234,6 +240,69 @@ namespace ChromiumIPCSniffer
             }
         }
 
+        [Flags]
+        public enum ThreadAccess : int
+        {
+            TERMINATE = (0x0001),
+            SUSPEND_RESUME = (0x0002),
+            GET_CONTEXT = (0x0008),
+            SET_CONTEXT = (0x0010),
+            SET_INFORMATION = (0x0020),
+            QUERY_INFORMATION = (0x0040),
+            SET_THREAD_TOKEN = (0x0080),
+            IMPERSONATE = (0x0100),
+            DIRECT_IMPERSONATION = (0x0200),
+
+        }
+
+
+        public static void SuspendProcess(this Process process)
+        {
+            foreach (ProcessThread pT in process.Threads)
+            {
+                IntPtr pOpenThread = OpenThread(ThreadAccess.SUSPEND_RESUME, false, (uint)pT.Id);
+
+                if (pOpenThread == IntPtr.Zero)
+                {
+                    continue;
+                }
+
+                SuspendThread(pOpenThread);
+
+                CloseHandle(pOpenThread);
+            }
+        }
+
+        public static void ResumeProcess(int pid)
+        {
+            var process = Process.GetProcessById(pid);
+
+            if (process.ProcessName == string.Empty)
+                return;
+
+            foreach (ProcessThread pT in process.Threads)
+            {
+                IntPtr pOpenThread = OpenThread(ThreadAccess.SUSPEND_RESUME, false, (uint)pT.Id);
+
+                if (pOpenThread == IntPtr.Zero)
+                {
+                    continue;
+                }
+
+                var suspendCount = 0;
+                do
+                {
+                    suspendCount = ResumeThread(pOpenThread);
+                } while (suspendCount > 0);
+
+                CloseHandle(pOpenThread);
+            }
+        }
+
+        [DllImport("kernel32.dll")]
+        static extern uint SuspendThread(IntPtr hThread);
+        [DllImport("kernel32.dll")]
+        static extern int ResumeThread(IntPtr hThread);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern SafeProcessHandle OpenProcess([In] ProcessAccessRights dwDesiredAccess, [In, MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, [In] int dwProcessId);
@@ -275,20 +344,6 @@ namespace ChromiumIPCSniffer
         [DllImport("kernel32.dll")]
         private static extern bool CloseHandle(IntPtr hObject);
 
-
-        [Flags]
-        public enum ThreadAccess : int
-        {
-            TERMINATE = (0x0001),
-            SUSPEND_RESUME = (0x0002),
-            GET_CONTEXT = (0x0008),
-            SET_CONTEXT = (0x0010),
-            SET_INFORMATION = (0x0020),
-            QUERY_INFORMATION = (0x0040),
-            SET_THREAD_TOKEN = (0x0080),
-            IMPERSONATE = (0x0100),
-            DIRECT_IMPERSONATION = (0x0200)
-        }
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern IntPtr OpenThread(ThreadAccess dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
