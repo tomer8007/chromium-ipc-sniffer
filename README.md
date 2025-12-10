@@ -51,7 +51,7 @@ If you don't like pre-built binaries, you can clone and compile this repository 
 
 ## Advanced Usage
 ```
-Chrome IPC Sniffer v0.5.0.0
+Chrome IPC Sniffer v0.7.0.0
 
 Syntax: chromeipc [options]
 Available options:
@@ -65,15 +65,17 @@ Available options:
             This helps reducing noise and it might improve performance
             (example: opening a new tab will create a new mojo pipe).
 
+        --dont-patch
+            Avoids trying to patch the chrome processes (Chromium v112+). The patching is used to make all IPCZ traffic directed to named pipe instead of shared memory.
+            Disabling patching is useful when the patching seems to misfunction\slow down, but will make this tools miss a lot of useful IDL calls
+
     Interface resolving:
         --update-interfaces-info
             Forcefully re-scan the chromium sources (from the internet) and populate the *_interfaces.json files.
             This might take a few good minutes. Use this if you see wrong interfaces info and wish to update
 
         --extract-method-names
-            Forcefully re-scan chrome.dll file to find the message IDs and update the mojo_interfaces_map.lua file
-            This should happen automaticlly whenever chrome.dll changes.
-
+            Forcefully re-scan chrome.dll file to find the message IDs and update the mojo_interfaces_map.lua file.
 ```
 
 ## Cheat Sheet
@@ -100,9 +102,12 @@ Go to Edit -> Prefrences -> Protocols -> MOJOUSER -> Enable structs deep dissect
 ## FAQ
 
 ### I don't see many mojo method calls packets. Why is that?
-Starting from Chrome v112, [ipcz](https://docs.google.com/document/d/1i49DF2af4JDspE1fTXuPrUvChQcqDChdHH6nx4xiyoY/edit?resourcekey=0-t_viq9NAbGb5kr_ni9scTA) is used as the underlying transport instead of Mojo Core. Unfortunately in this mode a lot of the interesting messages are going through shared memory and not named pipes, which means this tool will not see.
+Starting from Chrome v112, [ipcz](https://docs.google.com/document/d/1i49DF2af4JDspE1fTXuPrUvChQcqDChdHH6nx4xiyoY/edit?resourcekey=0-t_viq9NAbGb5kr_ni9scTA) is used as the underlying transport instead of Mojo Core. Natively, in this mode a lot of the interesting messages are supposed to go through shared memory and not named pipes, which means this tool will not see. 
 
-You can force Chrome to use Mojo Core again by running it with these arguments:
+To overcome this, this tool is trying to patch the Chrome processes to make them always send the IPCZ parcels over the pipe instead of shared memory.
+If you still see missing method calls it's possible that the patching feature is not working as expected, or that the messages you are interesting in are sent in the early life of the chrome process (~first 1-2 seconds) before the patching happens.
+
+You can try to force Chrome to use Mojo Core again by running it with these arguments:
 `chrome.exe --disable-features=MojoIpcz`
 
 
