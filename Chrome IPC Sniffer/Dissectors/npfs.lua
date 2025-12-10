@@ -84,8 +84,8 @@ function npfs_protocol.dissector(buffer, pinfo, tree)
     elseif _dstpid()() == 0 then
         subtree:add_proto_expert_info(expert_info_pipeerror, "Could not find destination PID, most likely because its pipe handle was closed")
     end
-    subtree:add_le(timestamp,           buffer(offset,8)):append_text(" (" .. "100-ns intervals since 1/1/1601, GMT" .. ")");                      offset = offset + 8
-    subtree:add_le(data_length,    buffer(offset,4));                                                                       offset = offset + 4
+    subtree:add_le(timestamp,           buffer(offset,8)):append_text(" (" .. "100-ns intervals since 1/1/1601, GMT" .. ")");   offset = offset + 8
+    subtree:add_le(data_length,    buffer(offset,4));                                                                           offset = offset + 4
 
     subtree:set_len(offset)
 

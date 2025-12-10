@@ -169,7 +169,7 @@ namespace ChromiumIPCSniffer
 
                 // fail with "only part of a ReadProcessMemory or WriteProcessMemory request was completed"?
                 // try again
-                Console.WriteLine(DateTime.Now.TimeOfDay + " [!] skipping patching of PID " + chromeProcessPID + " because of error: " + e.Message);
+                Console.WriteLine("[!] skipping patching of PID " + chromeProcessPID + " because of error: " + e.Message);
                 return;
             }
 
